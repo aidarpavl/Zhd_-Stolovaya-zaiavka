@@ -1,74 +1,9 @@
-import streamlit as st
 import pandas as pd
 import qrcode
-from io import BytesIO
 import datetime
 import time
 import os
-
-st.set_page_config(page_title="SchoolEats", page_icon="🍽️", layout="wide")
-
-def load_css():
-    st.markdown("""
-    <style>
-        .main .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
-        body { background-color: #f8fafc; }
-        .card {
-            background: white; border-radius: 2rem; padding: 1.5rem;
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05);
-            transition: all 0.3s ease; border: 1px solid #f1f5f9;
-        }
-        .card:hover { transform: translateY(-2px); box-shadow: 0 25px 30px -12px rgb(0 0 0 / 0.15); }
-        .card-junior { background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; }
-        .stButton > button,
-        .stFormSubmitButton > button,
-        .stDownloadButton > button {
-            border-radius: 1rem !important;
-            font-weight: 700 !important;
-            background-color: #f97316 !important;
-            color: white !important;
-            border: none !important;
-            transition: all 0.2s ease !important;
-        }
-        .stButton > button:hover,
-        .stFormSubmitButton > button:hover,
-        .stDownloadButton > button:hover {
-            background-color: #ea580c !important;
-            transform: scale(0.98);
-        }
-        [data-testid="stSidebar"] { background-color: white; border-right: 1px solid #f1f5f9; }
-        .order-number {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 1rem; border-radius: 1rem;
-            text-align: center; font-size: 1.5rem; font-weight: bold; margin: 1rem 0;
-        }
-        .week-badge {
-            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
-            display: inline-block; font-weight: 700; margin-bottom: 1rem;
-        }
-        .class-badge {
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
-            display: inline-block; font-weight: 700; margin-bottom: 1rem;
-        }
-        footer { visibility: hidden; }
-        .stAlert { border-radius: 1rem; }
-        .info-chip {
-            background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem;
-            border-radius: 0.5rem; font-size: 0.75rem;
-            display: inline-block; margin-right: 0.5rem; margin-top: 0.5rem;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-load_css()
-
-def ensure_directories():
-    if not os.path.exists('reports'):
-        os.makedirs('reports')
-    if not os.path.exists('data'):
-        os.makedirs('data')
+import streamlit as st
 
 REPORT_DIR = "reports"
 DATA_DIR = "data"
@@ -78,13 +13,23 @@ ORDERS_FILE = "orders.csv"
 MENU_FILE = "menu.csv"
 MENU_COLS = ['week','day','menu_type','item_name','category','price','weight','calories','available']
 
+
+def ensure_directories():
+    if not os.path.exists('reports'):
+        os.makedirs('reports')
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
+
 def save_weekly_report(data):
     ensure_directories()
     pd.DataFrame(data).to_csv(os.path.join(REPORT_DIR, WEEKLY_REPORT_FILE), index=False, encoding='utf-8-sig')
 
+
 def save_monthly_report(data):
     ensure_directories()
     pd.DataFrame(data).to_csv(os.path.join(REPORT_DIR, MONTHLY_REPORT_FILE), index=False, encoding='utf-8-sig')
+
 
 def load_weekly_report():
     ensure_directories()
@@ -97,6 +42,7 @@ def load_weekly_report():
         pass
     return pd.DataFrame(columns=cols)
 
+
 def load_monthly_report():
     ensure_directories()
     fp = os.path.join(REPORT_DIR, MONTHLY_REPORT_FILE)
@@ -107,6 +53,7 @@ def load_monthly_report():
     except Exception:
         pass
     return pd.DataFrame(columns=cols)
+
 
 def load_orders():
     ensure_directories()
@@ -123,9 +70,11 @@ def load_orders():
         pass
     return pd.DataFrame(columns=cols)
 
+
 def save_orders(odf):
     ensure_directories()
     odf.to_csv(os.path.join(REPORT_DIR, ORDERS_FILE), index=False, encoding='utf-8-sig')
+
 
 def create_default_menu():
     ensure_directories()
@@ -157,6 +106,7 @@ def create_default_menu():
     df.to_csv(os.path.join(DATA_DIR, MENU_FILE), index=False, encoding='utf-8-sig')
     return df
 
+
 def load_menu_from_sheet():
     ensure_directories()
     fp = os.path.join(DATA_DIR, MENU_FILE)
@@ -179,6 +129,7 @@ def load_menu_from_sheet():
     except Exception:
         return create_default_menu()
 
+
 def save_menu_to_sheet(mdf):
     ensure_directories()
     for col in MENU_COLS:
@@ -187,6 +138,7 @@ def save_menu_to_sheet(mdf):
     mdf = mdf[MENU_COLS]
     mdf.to_csv(os.path.join(DATA_DIR, MENU_FILE), index=False, encoding='utf-8-sig')
 
+
 def add_new_item(week, day, mtype, name, cat, price=0, weight=0, cal=0, avail=True):
     df = load_menu_from_sheet()
     new = pd.DataFrame({'week':[week],'day':[day],'menu_type':[mtype],'item_name':[name],'category':[cat],'price':[price],'weight':[weight],'calories':[cal],'available':[avail]})
@@ -194,10 +146,12 @@ def add_new_item(week, day, mtype, name, cat, price=0, weight=0, cal=0, avail=Tr
     save_menu_to_sheet(df)
     return True
 
+
 def get_menu_by_week_day_type(week, day, mtype):
     df = load_menu_from_sheet()
     if df.empty: return pd.DataFrame()
     return df[(df['week']==week)&(df['day']==day)&(df['menu_type']==mtype)]
+
 
 def is_junior_class(cls):
     try:
@@ -207,8 +161,10 @@ def is_junior_class(cls):
         pass
     return False
 
+
 def generate_order_number():
     return f"ORD-{datetime.datetime.now().strftime('%Y%m%d')}-{str(int(time.time()))[-4:]}"
+
 
 def place_order(name, cls, items, total, pm):
     ensure_directories()
@@ -232,6 +188,7 @@ def place_order(name, cls, items, total, pm):
     save_monthly_report(mdf)
     return num
 
+
 def complete_order(num):
     odf = load_orders()
     odf.loc[odf['order_number']==num,'status'] = 'completed'
@@ -245,11 +202,13 @@ def complete_order(num):
         mdf.loc[mdf['order_number']==num,'status'] = 'completed'
         save_monthly_report(mdf)
 
+
 def get_pending_orders():
     odf = load_orders()
     if not odf.empty and 'status' in odf.columns:
         return odf[odf['status']=='pending']
     return pd.DataFrame()
+
 
 def get_completed_orders():
     odf = load_orders()
@@ -257,17 +216,52 @@ def get_completed_orders():
         return odf[odf['status']=='completed']
     return pd.DataFrame()
 
+
 def generate_qr(data):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(data)
     qr.make(fit=True)
     return qr.make_image(fill_color="black", back_color="white")
 
+
 def generate_payment_qr(oid, amt):
     return generate_qr(f"PAYMENT:{oid}:{amt}:{int(time.time())}")
 
+
 def verify_chef_password(p):
     return p == "123*"
+
+import streamlit as st
+import pandas as pd
+from io import BytesIO
+import datetime
+import time
+
+from utils import (
+    ensure_directories, is_junior_class, get_menu_by_week_day_type,
+    load_menu_from_sheet, save_menu_to_sheet, add_new_item,
+    place_order, complete_order, get_pending_orders,
+    load_weekly_report, load_monthly_report,
+    generate_payment_qr, verify_chef_password,
+    WEEKLY_REPORT_FILE, MONTHLY_REPORT_FILE
+)
+
+st.set_page_config(page_title="SchoolEats", page_icon="🍽️", layout="wide")
+
+st.markdown("""
+<style>
+    .main .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
+    .stButton > button, .stFormSubmitButton > button, .stDownloadButton > button {
+        border-radius: 1rem !important; font-weight: 700 !important;
+        background-color: #f97316 !important; color: white !important; border: none !important;
+    }
+    .stButton > button:hover, .stFormSubmitButton > button:hover {
+        background-color: #ea580c !important;
+    }
+    footer { visibility: hidden; }
+</style>
+""", unsafe_allow_html=True)
+
 
 def main():
     ensure_directories()
@@ -282,8 +276,6 @@ def main():
         d = datetime.datetime.now().day
         st.session_state.selected_week = 1 if d <= 7 else 2 if d <= 14 else 3 if d <= 21 else 4
     if 'student_class' not in st.session_state: st.session_state.student_class = ""
-
-    # === Инициализация счётчиков количества ===
     if 'qty_state' not in st.session_state: st.session_state.qty_state = {}
 
     with st.sidebar:
@@ -379,12 +371,10 @@ def main():
                                     else:
                                         st.markdown(f"**{item['item_name']}**  \n*{item['category']}*  \n💰 {int(item['price'])}₸")
 
-                                    # === Ключ для этого блюда ===
                                     qty_key = f"qty_{st.session_state.selected_week}_{item['item_name']}_{idx}"
                                     if qty_key not in st.session_state.qty_state:
                                         st.session_state.qty_state[qty_key] = 1
 
-                                    # === Кнопки - 1 - для выбора количества ===
                                     c1, c2, c3 = st.columns([1, 2, 1])
                                     with c1:
                                         if st.button("➖", key=f"minus_{qty_key}", use_container_width=True):
@@ -607,17 +597,42 @@ def main():
                 else:
                     st.success("🎉 Нет активных заказов")
 
-            with t4:
+                       with t4:
                 st.markdown("### 📊 Отчеты")
-                rt = st.radio("Тип:", ["Недельный","Месячный"], horizontal=True)
-                df = load_weekly_report() if rt == "Недельный" else load_monthly_report()
+                rt = st.radio("Тип:", ["Недельный", "Месячный"], horizontal=True)
+                if rt == "Недельный":
+                    df = load_weekly_report()
+                    fname = WEEKLY_REPORT_FILE
+                else:
+                    df = load_monthly_report()
+                    fname = MONTHLY_REPORT_FILE
+
                 if not df.empty and 'order_number' in df.columns:
-                    cc = len(df[df['status']=='completed']['order_number'].unique()) if 'status' in df.columns else 0
-                    pc = len(df[df['status']=='pending']['order_number'].unique()) if 'status' in df.columns else 0
-                    tr = df['order_total'].sum() if 'order_total' in df.columns else 0
+                    if 'status' in df.columns:
+                        cc = len(df[df['status'] == 'completed']['order_number'].unique())
+                        pc = len(df[df['status'] == 'pending']['order_number'].unique())
+                    else:
+                        cc = 0
+                        pc = 0
+                    if 'order_total' in df.columns:
+                        tr = df['order_total'].sum()
+                    else:
+                        tr = 0
+
                     c1, c2, c3 = st.columns(3)
-                    with c1: st.metric("✅ Выдано", cc)
-                    with c2: st.metric("⏳ Ожидают", pc)
-                    with c3: st.metric("💰 Выручка", f"{tr:,.0f}₸")
+                    with c1:
+                        st.metric("✅ Выдано", cc)
+                    with c2:
+                        st.metric("⏳ Ожидают", pc)
+                    with c3:
+                        st.metric("💰 Выручка", f"{tr:,.0f}₸")
+
                     csv_data = df.to_csv(index=False).encode('utf-8-sig')
-                    fname = WEEKLY_REPORT_FILE if rt ==
+                    st.download_button("📥 Скачать", csv_data, fname, "text/csv")
+                else:
+                    st.info("Нет данных")
+
+
+if __name__ == "__main__":
+    main()
+
