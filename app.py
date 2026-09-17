@@ -42,6 +42,10 @@ def load_css():
             transform: translateY(-2px);
             box-shadow: 0 25px 30px -12px rgb(0 0 0 / 0.15);
         }
+        .card-junior {
+            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+            border: 1px solid #bbf7d0;
+        }
         .stButton > button {
             border-radius: 1rem !important;
             font-weight: 700 !important;
@@ -77,8 +81,27 @@ def load_css():
             font-weight: 700;
             margin-bottom: 1rem;
         }
+        .class-badge {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            display: inline-block;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
         footer { visibility: hidden; }
         .stAlert { border-radius: 1rem; }
+        .info-chip {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            display: inline-block;
+            margin-right: 0.5rem;
+            margin-top: 0.5rem;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -171,34 +194,92 @@ def save_orders(orders_df):
     filepath = os.path.join(REPORT_DIR, ORDERS_FILE)
     orders_df.to_csv(filepath, index=False, encoding='utf-8-sig')
 
-# --- Menu Management ---
+# --- Menu Management (с разделением на младшие и старшие классы) ---
 def create_default_menu():
+    """Create default menu with junior (1-4) and senior (5-11) menus"""
     ensure_directories()
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     rows = []
     days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
+    
     for week in [1, 2, 3, 4]:
         for day in days:
+            # === Меню для младших классов (1-4): вес, калории, БЕЗ цены ===
             if day == 'Понедельник':
-                items = [('Борщ', 'Обед', 450), ('Котлета с пюре', 'Обед', 550), ('Компот', 'Напитки', 150)]
+                junior_items = [
+                    ('Каша манная', 'Завтрак', 200, 210),
+                    ('Борщ', 'Обед', 250, 180),
+                    ('Котлета с пюре', 'Обед', 180, 320),
+                    ('Компот', 'Напитки', 200, 80)
+                ]
+                senior_items = [('Борщ', 'Обед', 450), ('Котлета с пюре', 'Обед', 550), ('Компот', 'Напитки', 150)]
             elif day == 'Вторник':
-                items = [('Суп куриный', 'Обед', 400), ('Плов', 'Обед', 600), ('Чай', 'Напитки', 100)]
+                junior_items = [
+                    ('Овсяная каша', 'Завтрак', 200, 220),
+                    ('Суп куриный', 'Обед', 250, 190),
+                    ('Плов', 'Обед', 180, 340),
+                    ('Чай с молоком', 'Напитки', 200, 90)
+                ]
+                senior_items = [('Суп куриный', 'Обед', 400), ('Плов', 'Обед', 600), ('Чай', 'Напитки', 100)]
             elif day == 'Среда':
-                items = [('Солянка', 'Обед', 480), ('Рыба с рисом', 'Обед', 650), ('Кисель', 'Напитки', 120)]
+                junior_items = [
+                    ('Рисовая каша', 'Завтрак', 200, 230),
+                    ('Солянка', 'Обед', 250, 200),
+                    ('Рыба с рисом', 'Обед', 180, 310),
+                    ('Кисель', 'Напитки', 200, 100)
+                ]
+                senior_items = [('Солянка', 'Обед', 480), ('Рыба с рисом', 'Обед', 650), ('Кисель', 'Напитки', 120)]
             elif day == 'Четверг':
-                items = [('Рассольник', 'Обед', 470), ('Гречка с мясом', 'Обед', 550), ('Сок', 'Напитки', 200)]
+                junior_items = [
+                    ('Пшённая каша', 'Завтрак', 200, 215),
+                    ('Рассольник', 'Обед', 250, 185),
+                    ('Гречка с мясом', 'Обед', 180, 330),
+                    ('Сок', 'Напитки', 200, 110)
+                ]
+                senior_items = [('Рассольник', 'Обед', 470), ('Гречка с мясом', 'Обед', 550), ('Сок', 'Напитки', 200)]
             else:
-                items = [('Лагман', 'Обед', 700), ('Макароны', 'Обед', 500), ('Кофе', 'Напитки', 250)]
-            for item_name, category, price in items:
+                junior_items = [
+                    ('Кукурузная каша', 'Завтрак', 200, 225),
+                    ('Лагман', 'Обед', 250, 260),
+                    ('Макароны', 'Обед', 180, 300),
+                    ('Кофейный напиток', 'Напитки', 200, 95)
+                ]
+                senior_items = [('Лагман', 'Обед', 700), ('Макароны', 'Обед', 500), ('Кофе', 'Напитки', 250)]
+            
+            # Добавляем младшие классы (menu_type='junior')
+            for item_name, category, weight, calories in junior_items:
                 rows.append({
-                    'week': week, 'day': day, 'item_name': item_name,
-                    'category': category, 'price': price, 'available': True
+                    'week': week,
+                    'day': day,
+                    'menu_type': 'junior',
+                    'item_name': item_name,
+                    'category': category,
+                    'price': 0,
+                    'weight': weight,
+                    'calories': calories,
+                    'available': True
                 })
+            
+            # Добавляем старшие классы (menu_type='senior')
+            for item_name, category, price in senior_items:
+                rows.append({
+                    'week': week,
+                    'day': day,
+                    'menu_type': 'senior',
+                    'item_name': item_name,
+                    'category': category,
+                    'price': price,
+                    'weight': 0,
+                    'calories': 0,
+                    'available': True
+                })
+    
     default_menu = pd.DataFrame(rows)
     default_menu.to_csv(menu_file, index=False, encoding='utf-8-sig')
     return default_menu
 
 def load_menu_from_sheet():
+    """Load menu with migration for new fields (menu_type, weight, calories)"""
     ensure_directories()
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     try:
@@ -207,9 +288,16 @@ def load_menu_from_sheet():
                 try:
                     df = pd.read_csv(menu_file, encoding=encoding)
                     if not df.empty and 'day' in df.columns:
+                        # Миграция: добавляем недостающие столбцы
                         if 'week' not in df.columns:
                             df['week'] = 1
-                            save_menu_to_sheet(df)
+                        if 'menu_type' not in df.columns:
+                            df['menu_type'] = 'senior'  # старое меню = старшие классы
+                        if 'weight' not in df.columns:
+                            df['weight'] = 0
+                        if 'calories' not in df.columns:
+                            df['calories'] = 0
+                        save_menu_to_sheet(df)
                         return df
                 except Exception:
                     continue
@@ -223,22 +311,47 @@ def save_menu_to_sheet(menu_df):
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     menu_df.to_csv(menu_file, index=False, encoding='utf-8-sig')
 
-def add_new_item(week, day, item_name, category, price, available=True):
+def add_new_item(week, day, menu_type, item_name, category, price=0, weight=0, calories=0, available=True):
+    """Add a new item. menu_type: 'junior' or 'senior'"""
     menu_df = load_menu_from_sheet()
     new_item = pd.DataFrame({
-        'week': [week], 'day': [day], 'item_name': [item_name],
-        'category': [category], 'price': [price], 'available': [available]
+        'week': [week],
+        'day': [day],
+        'menu_type': [menu_type],
+        'item_name': [item_name],
+        'category': [category],
+        'price': [price],
+        'weight': [weight],
+        'calories': [calories],
+        'available': [available]
     })
     menu_df = pd.concat([menu_df, new_item], ignore_index=True)
     save_menu_to_sheet(menu_df)
     return True
 
-def get_menu_by_week_and_day(week, day):
+def get_menu_by_week_day_type(week, day, menu_type):
+    """Get menu filtered by week, day and menu type (junior/senior)"""
     menu_df = load_menu_from_sheet()
     if menu_df.empty:
         return pd.DataFrame()
-    filtered = menu_df[(menu_df['week'] == week) & (menu_df['day'] == day)]
+    filtered = menu_df[
+        (menu_df['week'] == week) &
+        (menu_df['day'] == day) &
+        (menu_df['menu_type'] == menu_type)
+    ]
     return filtered
+
+def is_junior_class(student_class):
+    """Определяет, является ли класс 1-4 (младший)"""
+    try:
+        # Извлекаем число из строки "3А", "5Б", "11В"
+        num_str = ''.join(filter(str.isdigit, str(student_class)))
+        if num_str:
+            class_num = int(num_str)
+            return 1 <= class_num <= 4
+    except Exception:
+        pass
+    return False
 
 # --- Order Management ---
 def generate_order_number():
@@ -281,9 +394,9 @@ def update_reports(order_number, date, day_name, student_name, student_class, it
         new_entry = pd.DataFrame([{
             'order_number': order_number, 'date': date_str, 'day': day_name,
             'student_name': student_name, 'student_class': student_class,
-            'item': item['name'], 'category': item['category'],
-            'quantity': item['quantity'], 'price': item['price'],
-            'total_item_price': item['price'] * item['quantity'],
+            'item': item['name'], 'category': item.get('category', ''),
+            'quantity': item['quantity'], 'price': item.get('price', 0),
+            'total_item_price': item.get('price', 0) * item['quantity'],
             'order_total': total_price, 'payment_method': payment_method, 'status': 'pending'
         }])
         weekly_df = pd.concat([weekly_df, new_entry], ignore_index=True)
@@ -362,14 +475,15 @@ def main():
     if 'selected_week' not in st.session_state:
         today = datetime.datetime.now()
         if today.day <= 7:
-            current_week = 1
+            st.session_state.selected_week = 1
         elif today.day <= 14:
-            current_week = 2
+            st.session_state.selected_week = 2
         elif today.day <= 21:
-            current_week = 3
+            st.session_state.selected_week = 3
         else:
-            current_week = 4
-        st.session_state.selected_week = current_week
+            st.session_state.selected_week = 4
+    if 'student_class' not in st.session_state:
+        st.session_state.student_class = ""
     
     # Sidebar
     with st.sidebar:
@@ -387,12 +501,16 @@ def main():
                     with c1:
                         st.write(f"{item['name']}")
                     with c2:
-                        st.write(f"{item['quantity']} x {item['price']}₸")
+                        if item['price'] > 0:
+                            st.write(f"{item['quantity']} x {item['price']}₸")
+                        else:
+                            st.write(f"{item['quantity']} порц.")
                     with c3:
                         if st.button("❌", key=f"remove_{i}_{item['name']}"):
                             st.session_state.cart.pop(i)
                             st.rerun()
-                st.markdown(f"**Итого: {total}₸**")
+                if total > 0:
+                    st.markdown(f"**Итого: {total}₸**")
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button("🗑️ Очистить", use_container_width=True):
@@ -414,6 +532,25 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
         
+        # === Ввод класса ученика ===
+        st.markdown("### 🎓 Введите ваш класс")
+        class_input = st.text_input("Класс (например, 3А или 7Б):", value=st.session_state.student_class, key="class_input")
+        if class_input != st.session_state.student_class:
+            st.session_state.student_class = class_input
+            st.rerun()
+        
+        is_junior = is_junior_class(st.session_state.student_class) if st.session_state.student_class else False
+        menu_type = 'junior' if is_junior else 'senior'
+        
+        if st.session_state.student_class:
+            if is_junior:
+                st.markdown(f'<div class="class-badge">🍎 Младшие классы (1-4): {st.session_state.student_class}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="week-badge">🎓 Старшие классы (5-11): {st.session_state.student_class}</div>', unsafe_allow_html=True)
+        else:
+            st.info("👆 Укажите класс, чтобы увидеть меню")
+        
+        # === Выбор недели ===
         st.markdown("### 📅 Выберите неделю")
         week_options = {1: "1-я неделя", 2: "2-я неделя", 3: "3-я неделя", 4: "4-я неделя"}
         week_cols = st.columns(4)
@@ -427,10 +564,16 @@ def main():
         
         st.markdown(f'<div class="week-badge">📆 Текущая неделя: {st.session_state.selected_week}-я неделя</div>', unsafe_allow_html=True)
         
+        # === Выбор дня ===
         days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
         selected_day = st.selectbox("Выберите день:", days, index=0)
         
-        menu_df = get_menu_by_week_and_day(st.session_state.selected_week, selected_day)
+        # === Загрузка меню ===
+        if not st.session_state.student_class:
+            st.warning("⚠️ Введите класс, чтобы увидеть меню.")
+            return
+        
+        menu_df = get_menu_by_week_day_type(st.session_state.selected_week, selected_day, menu_type)
         
         if menu_df.empty:
             st.warning(f"Меню на {selected_day} ({st.session_state.selected_week}-я неделя) пока не загружено.")
@@ -450,15 +593,32 @@ def main():
                     if item['available']:
                         with cols[idx % 3]:
                             with st.container():
-                                st.markdown(f"""
-                                    <div class="card">
-                                        <h4 style="font-weight: 800;">{item['item_name']}</h4>
-                                        <p style="color: #64748b; font-size: 0.875rem;">{item['category']}</p>
-                                        <div style="margin-top: 1rem;">
-                                            <span style="font-size: 1.25rem; font-weight: 800; color: #f97316;">{item['price']}₸</span>
+                                if is_junior:
+                                    # === Младшие классы: вес и калории, БЕЗ цены ===
+                                    weight = int(item.get('weight', 0)) if pd.notna(item.get('weight', 0)) else 0
+                                    calories = int(item.get('calories', 0)) if pd.notna(item.get('calories', 0)) else 0
+                                    st.markdown(f"""
+                                        <div class="card card-junior">
+                                            <h4 style="font-weight: 800;">{item['item_name']}</h4>
+                                            <p style="color: #64748b; font-size: 0.875rem;">{item['category']}</p>
+                                            <div style="margin-top: 1rem;">
+                                                <span class="info-chip">⚖️ {weight} г</span>
+                                                <span class="info-chip">🔥 {calories} ккал</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                """, unsafe_allow_html=True)
+                                    """, unsafe_allow_html=True)
+                                else:
+                                    # === Старшие классы: цена, как было ===
+                                    st.markdown(f"""
+                                        <div class="card">
+                                            <h4 style="font-weight: 800;">{item['item_name']}</h4>
+                                            <p style="color: #64748b; font-size: 0.875rem;">{item['category']}</p>
+                                            <div style="margin-top: 1rem;">
+                                                <span style="font-size: 1.25rem; font-weight: 800; color: #f97316;">{int(item['price'])}₸</span>
+                                            </div>
+                                        </div>
+                                    """, unsafe_allow_html=True)
+                                
                                 c1, c2 = st.columns([1, 1])
                                 with c1:
                                     quantity = st.number_input("Кол-во", min_value=0, max_value=10,
@@ -478,7 +638,7 @@ def main():
                                             if not found:
                                                 st.session_state.cart.append({
                                                     'name': item['item_name'],
-                                                    'price': int(item['price']),
+                                                    'price': int(item['price']) if not is_junior else 0,
                                                     'quantity': quantity,
                                                     'category': item['category']
                                                 })
@@ -492,54 +652,68 @@ def main():
             with st.expander("Оформление заказа", expanded=True):
                 st.markdown("### 📝 Информация о заказе")
                 total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
-                c1, c2 = st.columns(2)
-                with c1:
-                    student_name = st.text_input("Ваше имя")
-                    student_class = st.text_input("Класс")
-                with c2:
-                    payment_method = st.radio("Способ оплаты:", ["Картой", "QR-код", "Наличными"])
                 
-                if st.button("Подтвердить заказ"):
-                    if student_name and student_class:
-                        if payment_method == "Картой":
-                            st.markdown("""
-                                ### 💳 Оплата картой
-                                **Kaspi Gold:** 4400 4301 2345 6789
-                                **Halyk Bank:** 4983 4567 8901 2345
-                            """)
-                            if st.button("✅ Оплачено"):
-                                onum = place_order(student_name, student_class, st.session_state.cart, total, "card")
+                student_name = st.text_input("Ваше имя")
+                student_class_final = st.text_input("Класс", value=st.session_state.student_class)
+                
+                # Для младших классов оплата не требуется
+                if is_junior:
+                    st.info("🍎 Для 1-4 классов питание бесплатное")
+                    payment_method = "free"
+                    if st.button("Подтвердить заказ"):
+                        if student_name and student_class_final:
+                            onum = place_order(student_name, student_class_final, st.session_state.cart, 0, "free")
+                            st.session_state.last_order_number = onum
+                            st.success(f"✅ Заказ оформлен! Номер: {onum}")
+                            st.session_state.cart = []
+                            st.session_state.show_checkout = False
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error("Пожалуйста, укажите имя и класс")
+                else:
+                    payment_method = st.radio("Способ оплаты:", ["Картой", "QR-код", "Наличными"])
+                    if st.button("Подтвердить заказ"):
+                        if student_name and student_class_final:
+                            if payment_method == "Картой":
+                                st.markdown("""
+                                    ### 💳 Оплата картой
+                                    **Kaspi Gold:** 4400 4301 2345 6789
+                                    **Halyk Bank:** 4983 4567 8901 2345
+                                """)
+                                if st.button("✅ Оплачено"):
+                                    onum = place_order(student_name, student_class_final, st.session_state.cart, total, "card")
+                                    st.session_state.last_order_number = onum
+                                    st.success(f"✅ Заказ оформлен! Номер: {onum}")
+                                    st.session_state.cart = []
+                                    st.session_state.show_checkout = False
+                                    time.sleep(2)
+                                    st.rerun()
+                            elif payment_method == "QR-код":
+                                temp = generate_order_number()
+                                qr_img = generate_payment_qr(temp, total)
+                                buf = BytesIO()
+                                qr_img.save(buf, format="PNG")
+                                st.image(buf.getvalue(), caption="QR-код для оплаты", width=250)
+                                if st.button("✅ Я оплатил(а)"):
+                                    onum = place_order(student_name, student_class_final, st.session_state.cart, total, "qr")
+                                    st.session_state.last_order_number = onum
+                                    st.success(f"✅ Заказ оформлен! Номер: {onum}")
+                                    st.session_state.cart = []
+                                    st.session_state.show_checkout = False
+                                    time.sleep(2)
+                                    st.rerun()
+                            else:
+                                onum = place_order(student_name, student_class_final, st.session_state.cart, total, "cash")
                                 st.session_state.last_order_number = onum
                                 st.success(f"✅ Заказ оформлен! Номер: {onum}")
-                                st.session_state.cart = []
-                                st.session_state.show_checkout = False
-                                time.sleep(2)
-                                st.rerun()
-                        elif payment_method == "QR-код":
-                            temp = generate_order_number()
-                            qr_img = generate_payment_qr(temp, total)
-                            buf = BytesIO()
-                            qr_img.save(buf, format="PNG")
-                            st.image(buf.getvalue(), caption="QR-код для оплаты", width=250)
-                            if st.button("✅ Я оплатил(а)"):
-                                onum = place_order(student_name, student_class, st.session_state.cart, total, "qr")
-                                st.session_state.last_order_number = onum
-                                st.success(f"✅ Заказ оформлен! Номер: {onum}")
+                                st.info("💰 Оплата наличными при получении")
                                 st.session_state.cart = []
                                 st.session_state.show_checkout = False
                                 time.sleep(2)
                                 st.rerun()
                         else:
-                            onum = place_order(student_name, student_class, st.session_state.cart, total, "cash")
-                            st.session_state.last_order_number = onum
-                            st.success(f"✅ Заказ оформлен! Номер: {onum}")
-                            st.info("💰 Оплата наличными при получении")
-                            st.session_state.cart = []
-                            st.session_state.show_checkout = False
-                            time.sleep(2)
-                            st.rerun()
-                    else:
-                        st.error("Пожалуйста, укажите имя и класс")
+                            st.error("Пожалуйста, укажите имя и класс")
     
     # --- Chef View ---
     else:
@@ -558,142 +732,16 @@ def main():
             
             # --- TAB 1: Редактирование меню ---
             with tab1:
-                st.markdown("### 📋 Редактирование меню по неделям")
-                edit_week = st.selectbox("Выберите неделю для редактирования:", [1, 2, 3, 4],
-                    format_func=lambda x: f"{x}-я неделя", key="chef_edit_week")
-                
-                menu_df = load_menu_from_sheet()
-                week_menu = menu_df[menu_df['week'] == edit_week].copy()
-                st.markdown(f"#### Меню на {edit_week}-ю неделю")
-                
-                if not week_menu.empty:
-                    edited_df = st.data_editor(
-                        week_menu,
-                        use_container_width=True,
-                        hide_index=True,
-                        column_config={
-                            "week": st.column_config.NumberColumn("Неделя", min_value=1, max_value=4, disabled=True),
-                            "day": st.column_config.SelectboxColumn("День", options=['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']),
-                            "item_name": "Блюдо",
-                            "category": st.column_config.SelectboxColumn("Категория", options=['Завтрак', 'Обед', 'Выпечка', 'Напитки']),
-                            "price": st.column_config.NumberColumn("Цена (₸)", min_value=0, step=10),
-                            "available": st.column_config.CheckboxColumn("Доступно")
-                        },
-                        key=f"menu_editor_week_{edit_week}"
-                    )
-                    if st.button("💾 Сохранить изменения", key=f"save_menu_week_{edit_week}"):
-                        other_weeks = menu_df[menu_df['week'] != edit_week]
-                        updated_menu = pd.concat([other_weeks, edited_df], ignore_index=True)
-                        save_menu_to_sheet(updated_menu)
-                        st.success(f"Меню на {edit_week}-ю неделю обновлено!")
-                        st.rerun()
-                else:
-                    st.info(f"Меню на {edit_week}-ю неделю пустое.")
-            
-            # --- TAB 2: Добавление блюда ---
-            with tab2:
-                st.markdown("### ➕ Добавление блюда")
+                st.markdown("### 📋 Редактирование меню")
                 c1, c2 = st.columns(2)
                 with c1:
-                    new_week = st.selectbox("Неделя", [1, 2, 3, 4],
-                        format_func=lambda x: f"{x}-я неделя", key="new_item_week")
-                    new_day = st.selectbox("День", ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'], key="new_item_day")
-                    new_item_name = st.text_input("Название", key="new_item_name")
+                    edit_week = st.selectbox("Неделя:", [1, 2, 3, 4],
+                        format_func=lambda x: f"{x}-я неделя", key="chef_edit_week")
                 with c2:
-                    new_category = st.selectbox("Категория", ['Завтрак', 'Обед', 'Выпечка', 'Напитки'], key="new_item_cat")
-                    new_price = st.number_input("Цена (₸)", min_value=0, step=10, key="new_item_price")
+                    edit_type = st.selectbox("Тип меню:", 
+                        ['junior', 'senior'],
+                        format_func=lambda x: "🍎 1-4 классы (вес/калории)" if x == 'junior' else "🎓 5-11 классы (цены)",
+                        key="chef_edit_type")
                 
-                if st.button("➕ Добавить", key="add_new_item_btn"):
-                    if new_item_name and new_price > 0:
-                        add_new_item(new_week, new_day, new_item_name, new_category, new_price)
-                        st.success(f"Добавлено: {new_item_name}")
-                        st.rerun()
-                    else:
-                        st.error("Заполните название и цену")
-            
-            # --- TAB 3: Заказы ---
-            with tab3:
-                st.markdown("### 📦 Выдача заказов")
-                pending_orders = get_pending_orders()
-                if not pending_orders.empty:
-                    st.info(f"⏳ Ожидают выдачи: {len(pending_orders)} заказов")
-                    for idx, (_, order) in enumerate(pending_orders.iterrows()):
-                        with st.expander(f"🎫 {order.get('order_number', 'N/A')} - {order.get('student_name', 'Unknown')}"):
-                            c1, c2 = st.columns(2)
-                            with c1:
-                                st.markdown(f"**📅 Дата:** {order.get('date', 'N/A')}")
-                                st.markdown(f"**💰 Сумма:** {order.get('total_price', 0)}₸")
-                                st.markdown(f"**💳 Оплата:** {order.get('payment_method', 'N/A')}")
-                            with c2:
-                                st.markdown(f"**🍽️ Заказ:** {order.get('items', 'N/A')}")
-                            if st.button("✅ Выдать заказ", key=f"complete_{order.get('order_number', idx)}_{idx}"):
-                                complete_order(order['order_number'])
-                                st.success(f"Заказ выдан!")
-                                st.rerun()
-                else:
-                    st.success("🎉 Нет заказов, ожидающих выдачи!")
-                
-                st.markdown("---")
-                st.markdown("### ✅ Выданные заказы")
-                completed_orders = get_completed_orders()
-                if not completed_orders.empty:
-                    for _, order in completed_orders.iterrows():
-                        st.markdown(f"- **{order.get('order_number', 'N/A')}** - {order.get('student_name', 'Unknown')} - {order.get('date', 'N/A')}")
-            
-            # --- TAB 4: Отчеты ---
-            with tab4:
-                st.markdown("### 📊 Отчеты")
-                report_type = st.radio("Тип отчета:", ["Недельный", "Месячный"], horizontal=True)
-                
-                if report_type == "Недельный":
-                    df = load_weekly_report()
-                else:
-                    df = load_monthly_report()
-                
-                if not df.empty and 'order_number' in df.columns:
-                    completed_count = 0
-                    pending_count = 0
-                    total_revenue = 0
-                    if 'status' in df.columns:
-                        completed_count = len(df[df['status'] == 'completed']['order_number'].unique())
-                        pending_count = len(df[df['status'] == 'pending']['order_number'].unique())
-                    if 'order_total' in df.columns:
-                        total_revenue = df['order_total'].sum()
-                    
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        st.metric("✅ Выдано", completed_count)
-                    with c2:
-                        st.metric("⏳ Ожидают", pending_count)
-                    with c3:
-                        st.metric("💰 Выручка", f"{total_revenue:,.0f}₸")
-                    
-                    display_cols = [x for x in ['order_number', 'date', 'student_name', 'total_price', 'payment_method', 'status'] if x in df.columns]
-                    if display_cols:
-                        display_df = df[display_cols].drop_duplicates(subset=['order_number']) if 'order_number' in display_cols else df[display_cols]
-                        st.dataframe(display_df, use_container_width=True)
-                    
-                    csv_data = df.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button("📥 Скачать отчет", csv_data,
-                        WEEKLY_REPORT_FILE if report_type == "Недельный" else MONTHLY_REPORT_FILE, "text/csv")
-                else:
-                    st.info(f"Нет данных за {'неделю' if report_type == 'Недельный' else 'месяц'}")
-            
-            # --- TAB 5: QR ---
-            with tab5:
-                st.markdown("### 🔐 QR-код повара")
-                if st.button("🔄 Сгенерировать QR"):
-                    qr_img = generate_chef_qr()
-                    buf = BytesIO()
-                    qr_img.save(buf, format="PNG")
-                    st.session_state.chef_qr = buf.getvalue()
-                if st.session_state.get('chef_qr'):
-                    st.image(st.session_state.chef_qr, caption="QR повара", width=250)
-                    st.download_button("📥 Скачать QR", st.session_state.chef_qr, "chef_qr.png", "image/png")
-                st.markdown("---")
-                if st.button("🚪 Выйти"):
-                    st.session_state.chef_authenticated = False
-                    st.rerun()
-
-if __name__ == "__main__":
-    main()
+                menu_df = load_menu_from_sheet()
+                filtered_menu = menu_df[(menu_df['week'] == edit_week) & (menu_df
