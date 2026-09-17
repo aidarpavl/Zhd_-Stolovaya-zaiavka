@@ -194,7 +194,7 @@ def save_orders(orders_df):
     filepath = os.path.join(REPORT_DIR, ORDERS_FILE)
     orders_df.to_csv(filepath, index=False, encoding='utf-8-sig')
 
-# --- Menu Management (с разделением на младшие и старшие классы) ---
+# --- Menu Management ---
 def create_default_menu():
     """Create default menu with junior (1-4) and senior (5-11) menus"""
     ensure_directories()
@@ -204,7 +204,6 @@ def create_default_menu():
     
     for week in [1, 2, 3, 4]:
         for day in days:
-            # === Меню для младших классов (1-4): вес, калории, БЕЗ цены ===
             if day == 'Понедельник':
                 junior_items = [
                     ('Каша манная', 'Завтрак', 200, 210),
@@ -246,32 +245,18 @@ def create_default_menu():
                 ]
                 senior_items = [('Лагман', 'Обед', 700), ('Макароны', 'Обед', 500), ('Кофе', 'Напитки', 250)]
             
-            # Добавляем младшие классы (menu_type='junior')
             for item_name, category, weight, calories in junior_items:
                 rows.append({
-                    'week': week,
-                    'day': day,
-                    'menu_type': 'junior',
-                    'item_name': item_name,
-                    'category': category,
-                    'price': 0,
-                    'weight': weight,
-                    'calories': calories,
-                    'available': True
+                    'week': week, 'day': day, 'menu_type': 'junior',
+                    'item_name': item_name, 'category': category,
+                    'price': 0, 'weight': weight, 'calories': calories, 'available': True
                 })
             
-            # Добавляем старшие классы (menu_type='senior')
             for item_name, category, price in senior_items:
                 rows.append({
-                    'week': week,
-                    'day': day,
-                    'menu_type': 'senior',
-                    'item_name': item_name,
-                    'category': category,
-                    'price': price,
-                    'weight': 0,
-                    'calories': 0,
-                    'available': True
+                    'week': week, 'day': day, 'menu_type': 'senior',
+                    'item_name': item_name, 'category': category,
+                    'price': price, 'weight': 0, 'calories': 0, 'available': True
                 })
     
     default_menu = pd.DataFrame(rows)
@@ -279,7 +264,6 @@ def create_default_menu():
     return default_menu
 
 def load_menu_from_sheet():
-    """Load menu with migration for new fields (menu_type, weight, calories)"""
     ensure_directories()
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     try:
@@ -288,11 +272,10 @@ def load_menu_from_sheet():
                 try:
                     df = pd.read_csv(menu_file, encoding=encoding)
                     if not df.empty and 'day' in df.columns:
-                        # Миграция: добавляем недостающие столбцы
                         if 'week' not in df.columns:
                             df['week'] = 1
                         if 'menu_type' not in df.columns:
-                            df['menu_type'] = 'senior'  # старое меню = старшие классы
+                            df['menu_type'] = 'senior'
                         if 'weight' not in df.columns:
                             df['weight'] = 0
                         if 'calories' not in df.columns:
@@ -312,25 +295,17 @@ def save_menu_to_sheet(menu_df):
     menu_df.to_csv(menu_file, index=False, encoding='utf-8-sig')
 
 def add_new_item(week, day, menu_type, item_name, category, price=0, weight=0, calories=0, available=True):
-    """Add a new item. menu_type: 'junior' or 'senior'"""
     menu_df = load_menu_from_sheet()
     new_item = pd.DataFrame({
-        'week': [week],
-        'day': [day],
-        'menu_type': [menu_type],
-        'item_name': [item_name],
-        'category': [category],
-        'price': [price],
-        'weight': [weight],
-        'calories': [calories],
-        'available': [available]
+        'week': [week], 'day': [day], 'menu_type': [menu_type],
+        'item_name': [item_name], 'category': [category],
+        'price': [price], 'weight': [weight], 'calories': [calories], 'available': [available]
     })
     menu_df = pd.concat([menu_df, new_item], ignore_index=True)
     save_menu_to_sheet(menu_df)
     return True
 
 def get_menu_by_week_day_type(week, day, menu_type):
-    """Get menu filtered by week, day and menu type (junior/senior)"""
     menu_df = load_menu_from_sheet()
     if menu_df.empty:
         return pd.DataFrame()
@@ -342,9 +317,7 @@ def get_menu_by_week_day_type(week, day, menu_type):
     return filtered
 
 def is_junior_class(student_class):
-    """Определяет, является ли класс 1-4 (младший)"""
     try:
-        # Извлекаем число из строки "3А", "5Б", "11В"
         num_str = ''.join(filter(str.isdigit, str(student_class)))
         if num_str:
             class_num = int(num_str)
@@ -463,7 +436,6 @@ def main():
             </div>
         """, unsafe_allow_html=True)
     
-    # Session state
     if 'role' not in st.session_state:
         st.session_state.role = "student"
     if 'cart' not in st.session_state:
@@ -485,7 +457,6 @@ def main():
     if 'student_class' not in st.session_state:
         st.session_state.student_class = ""
     
-    # Sidebar
     with st.sidebar:
         st.markdown("### 🎯 Режим работы")
         role = st.radio("Выберите роль:", ["Ученик", "Повар"], horizontal=True)
@@ -532,7 +503,6 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
         
-        # === Ввод класса ученика ===
         st.markdown("### 🎓 Введите ваш класс")
         class_input = st.text_input("Класс (например, 3А или 7Б):", value=st.session_state.student_class, key="class_input")
         if class_input != st.session_state.student_class:
@@ -550,7 +520,6 @@ def main():
         else:
             st.info("👆 Укажите класс, чтобы увидеть меню")
         
-        # === Выбор недели ===
         st.markdown("### 📅 Выберите неделю")
         week_options = {1: "1-я неделя", 2: "2-я неделя", 3: "3-я неделя", 4: "4-я неделя"}
         week_cols = st.columns(4)
@@ -564,88 +533,83 @@ def main():
         
         st.markdown(f'<div class="week-badge">📆 Текущая неделя: {st.session_state.selected_week}-я неделя</div>', unsafe_allow_html=True)
         
-        # === Выбор дня ===
         days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
         selected_day = st.selectbox("Выберите день:", days, index=0)
         
-        # === Загрузка меню ===
         if not st.session_state.student_class:
             st.warning("⚠️ Введите класс, чтобы увидеть меню.")
-            return
-        
-        menu_df = get_menu_by_week_day_type(st.session_state.selected_week, selected_day, menu_type)
-        
-        if menu_df.empty:
-            st.warning(f"Меню на {selected_day} ({st.session_state.selected_week}-я неделя) пока не загружено.")
         else:
-            all_categories = ['Все'] + list(menu_df['category'].unique())
-            selected_category = st.selectbox("Категория:", all_categories)
+            menu_df = get_menu_by_week_day_type(st.session_state.selected_week, selected_day, menu_type)
             
-            filtered_menu = menu_df.copy()
-            if selected_category != 'Все':
-                filtered_menu = filtered_menu[filtered_menu['category'] == selected_category]
-            
-            st.markdown(f"### 🍽️ Меню на {selected_day} ({st.session_state.selected_week}-я неделя)")
-            
-            if not filtered_menu.empty:
-                cols = st.columns(3)
-                for idx, (_, item) in enumerate(filtered_menu.iterrows()):
-                    if item['available']:
-                        with cols[idx % 3]:
-                            with st.container():
-                                if is_junior:
-                                    # === Младшие классы: вес и калории, БЕЗ цены ===
-                                    weight = int(item.get('weight', 0)) if pd.notna(item.get('weight', 0)) else 0
-                                    calories = int(item.get('calories', 0)) if pd.notna(item.get('calories', 0)) else 0
-                                    st.markdown(f"""
-                                        <div class="card card-junior">
-                                            <h4 style="font-weight: 800;">{item['item_name']}</h4>
-                                            <p style="color: #64748b; font-size: 0.875rem;">{item['category']}</p>
-                                            <div style="margin-top: 1rem;">
-                                                <span class="info-chip">⚖️ {weight} г</span>
-                                                <span class="info-chip">🔥 {calories} ккал</span>
-                                            </div>
-                                        </div>
-                                    """, unsafe_allow_html=True)
-                                else:
-                                    # === Старшие классы: цена, как было ===
-                                    st.markdown(f"""
-                                        <div class="card">
-                                            <h4 style="font-weight: 800;">{item['item_name']}</h4>
-                                            <p style="color: #64748b; font-size: 0.875rem;">{item['category']}</p>
-                                            <div style="margin-top: 1rem;">
-                                                <span style="font-size: 1.25rem; font-weight: 800; color: #f97316;">{int(item['price'])}₸</span>
-                                            </div>
-                                        </div>
-                                    """, unsafe_allow_html=True)
-                                
-                                c1, c2 = st.columns([1, 1])
-                                with c1:
-                                    quantity = st.number_input("Кол-во", min_value=0, max_value=10,
-                                        key=f"qty_{st.session_state.selected_week}_{item['item_name']}_{idx}",
-                                        label_visibility="collapsed")
-                                with c2:
-                                    if st.button("➕ В корзину",
-                                        key=f"add_{st.session_state.selected_week}_{item['item_name']}_{idx}",
-                                        use_container_width=True):
-                                        if quantity > 0:
-                                            found = False
-                                            for ci in st.session_state.cart:
-                                                if ci['name'] == item['item_name']:
-                                                    ci['quantity'] += quantity
-                                                    found = True
-                                                    break
-                                            if not found:
-                                                st.session_state.cart.append({
-                                                    'name': item['item_name'],
-                                                    'price': int(item['price']) if not is_junior else 0,
-                                                    'quantity': quantity,
-                                                    'category': item['category']
-                                                })
-                                            st.success(f"Добавлено {quantity} x {item['item_name']}")
-                                            st.rerun()
+            if menu_df.empty:
+                st.warning(f"Меню на {selected_day} ({st.session_state.selected_week}-я неделя) пока не загружено.")
             else:
-                st.info(f"На {selected_day} пока нет блюд в этой категории")
+                all_categories = ['Все'] + list(menu_df['category'].unique())
+                selected_category = st.selectbox("Категория:", all_categories)
+                
+                filtered_menu = menu_df.copy()
+                if selected_category != 'Все':
+                    filtered_menu = filtered_menu[filtered_menu['category'] == selected_category]
+                
+                st.markdown(f"### 🍽️ Меню на {selected_day} ({st.session_state.selected_week}-я неделя)")
+                
+                if not filtered_menu.empty:
+                    cols = st.columns(3)
+                    for idx, (_, item) in enumerate(filtered_menu.iterrows()):
+                        if item['available']:
+                            with cols[idx % 3]:
+                                with st.container():
+                                    if is_junior:
+                                        weight = int(item.get('weight', 0)) if pd.notna(item.get('weight', 0)) else 0
+                                        calories = int(item.get('calories', 0)) if pd.notna(item.get('calories', 0)) else 0
+                                        st.markdown(f"""
+                                            <div class="card card-junior">
+                                                <h4 style="font-weight: 800;">{item['item_name']}</h4>
+                                                <p style="color: #64748b; font-size: 0.875rem;">{item['category']}</p>
+                                                <div style="margin-top: 1rem;">
+                                                    <span class="info-chip">⚖️ {weight} г</span>
+                                                    <span class="info-chip">🔥 {calories} ккал</span>
+                                                </div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                    else:
+                                        st.markdown(f"""
+                                            <div class="card">
+                                                <h4 style="font-weight: 800;">{item['item_name']}</h4>
+                                                <p style="color: #64748b; font-size: 0.875rem;">{item['category']}</p>
+                                                <div style="margin-top: 1rem;">
+                                                    <span style="font-size: 1.25rem; font-weight: 800; color: #f97316;">{int(item['price'])}₸</span>
+                                                </div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                    
+                                    c1, c2 = st.columns([1, 1])
+                                    with c1:
+                                        quantity = st.number_input("Кол-во", min_value=0, max_value=10,
+                                            key=f"qty_{st.session_state.selected_week}_{item['item_name']}_{idx}",
+                                            label_visibility="collapsed")
+                                    with c2:
+                                        if st.button("➕ В корзину",
+                                            key=f"add_{st.session_state.selected_week}_{item['item_name']}_{idx}",
+                                            use_container_width=True):
+                                            if quantity > 0:
+                                                found = False
+                                                for ci in st.session_state.cart:
+                                                    if ci['name'] == item['item_name']:
+                                                        ci['quantity'] += quantity
+                                                        found = True
+                                                        break
+                                                if not found:
+                                                    st.session_state.cart.append({
+                                                        'name': item['item_name'],
+                                                        'price': int(item['price']) if not is_junior else 0,
+                                                        'quantity': quantity,
+                                                        'category': item['category']
+                                                    })
+                                                st.success(f"Добавлено {quantity} x {item['item_name']}")
+                                                st.rerun()
+                else:
+                    st.info(f"На {selected_day} пока нет блюд в этой категории")
         
         # --- Checkout ---
         if st.session_state.get('show_checkout', False):
@@ -656,10 +620,8 @@ def main():
                 student_name = st.text_input("Ваше имя")
                 student_class_final = st.text_input("Класс", value=st.session_state.student_class)
                 
-                # Для младших классов оплата не требуется
                 if is_junior:
                     st.info("🍎 Для 1-4 классов питание бесплатное")
-                    payment_method = "free"
                     if st.button("Подтвердить заказ"):
                         if student_name and student_class_final:
                             onum = place_order(student_name, student_class_final, st.session_state.cart, 0, "free")
@@ -738,10 +700,34 @@ def main():
                     edit_week = st.selectbox("Неделя:", [1, 2, 3, 4],
                         format_func=lambda x: f"{x}-я неделя", key="chef_edit_week")
                 with c2:
-                    edit_type = st.selectbox("Тип меню:", 
-                        ['junior', 'senior'],
+                    edit_type = st.selectbox("Тип меню:", ['junior', 'senior'],
                         format_func=lambda x: "🍎 1-4 классы (вес/калории)" if x == 'junior' else "🎓 5-11 классы (цены)",
                         key="chef_edit_type")
                 
                 menu_df = load_menu_from_sheet()
-                filtered_menu = menu_df[(menu_df['week'] == edit_week) & (menu_df
+                filtered_menu = menu_df[
+                    (menu_df['week'] == edit_week) &
+                    (menu_df['menu_type'] == edit_type)
+                ].copy()
+                
+                st.markdown(f"#### Меню: {edit_week}-я неделя, {edit_type}")
+                
+                if not filtered_menu.empty:
+                    edited_df = st.data_editor(
+                        filtered_menu,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "week": st.column_config.NumberColumn("Неделя", min_value=1, max_value=4, disabled=True),
+                            "day": st.column_config.SelectboxColumn("День", options=['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']),
+                            "menu_type": st.column_config.SelectboxColumn("Тип", options=['junior', 'senior'], disabled=True),
+                            "item_name": "Блюдо",
+                            "category": st.column_config.SelectboxColumn("Категория", options=['Завтрак', 'Обед', 'Выпечка', 'Напитки']),
+                            "price": st.column_config.NumberColumn("Цена (₸)", min_value=0, step=10),
+                            "weight": st.column_config.NumberColumn("Вес (г)", min_value=0, step=10),
+                            "calories": st.column_config.NumberColumn("Калории", min_value=0, step=10),
+                            "available": st.column_config.CheckboxColumn("Доступно")
+                        },
+                        key=f"menu_editor_{edit_week}_{edit_type}"
+                    )
+                    if st.button("💾 Сохранить изменения", key=f"save_menu_{edit_
