@@ -9,7 +9,6 @@ import datetime
 import hashlib
 import time
 import os
-import plotly.express as px
 import csv
 
 # --- Page Configuration ---
@@ -24,83 +23,42 @@ st.set_page_config(
 def load_css():
     st.markdown("""
     <style>
-        .main .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            max-width: 1200px;
-        }
+        .main .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
         body { background-color: #f8fafc; }
         .card {
-            background: white;
-            border-radius: 2rem;
-            padding: 1.5rem;
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.01);
-            transition: all 0.3s ease;
-            border: 1px solid #f1f5f9;
+            background: white; border-radius: 2rem; padding: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05);
+            transition: all 0.3s ease; border: 1px solid #f1f5f9;
         }
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 25px 30px -12px rgb(0 0 0 / 0.15);
-        }
-        .card-junior {
-            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
-            border: 1px solid #bbf7d0;
-        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 25px 30px -12px rgb(0 0 0 / 0.15); }
+        .card-junior { background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; }
         .stButton > button {
-            border-radius: 1rem !important;
-            font-weight: 700 !important;
-            transition: all 0.2s ease !important;
-            background-color: #f97316 !important;
-            color: white !important;
-            border: none !important;
+            border-radius: 1rem !important; font-weight: 700 !important;
+            background-color: #f97316 !important; color: white !important; border: none !important;
         }
-        .stButton > button:hover {
-            background-color: #ea580c !important;
-            transform: scale(0.98);
-        }
-        [data-testid="stSidebar"] {
-            background-color: white;
-            border-right: 1px solid #f1f5f9;
-        }
+        .stButton > button:hover { background-color: #ea580c !important; }
+        [data-testid="stSidebar"] { background-color: white; border-right: 1px solid #f1f5f9; }
         .order-number {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem;
-            border-radius: 1rem;
-            text-align: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: 1rem 0;
+            color: white; padding: 1rem; border-radius: 1rem;
+            text-align: center; font-size: 1.5rem; font-weight: bold; margin: 1rem 0;
         }
         .week-badge {
             background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 1rem;
-            display: inline-block;
-            font-weight: 700;
-            margin-bottom: 1rem;
+            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
+            display: inline-block; font-weight: 700; margin-bottom: 1rem;
         }
         .class-badge {
             background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 1rem;
-            display: inline-block;
-            font-weight: 700;
-            margin-bottom: 1rem;
+            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
+            display: inline-block; font-weight: 700; margin-bottom: 1rem;
         }
         footer { visibility: hidden; }
         .stAlert { border-radius: 1rem; }
         .info-chip {
-            background: #f1f5f9;
-            color: #475569;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            display: inline-block;
-            margin-right: 0.5rem;
-            margin-top: 0.5rem;
+            background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem; font-size: 0.75rem;
+            display: inline-block; margin-right: 0.5rem; margin-top: 0.5rem;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -196,68 +154,34 @@ def save_orders(orders_df):
 
 # --- Menu Management ---
 def create_default_menu():
-    """Create default menu with junior (1-4) and senior (5-11) menus"""
     ensure_directories()
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     rows = []
     days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
-    
     for week in [1, 2, 3, 4]:
         for day in days:
             if day == 'Понедельник':
-                junior_items = [
-                    ('Каша манная', 'Завтрак', 200, 210),
-                    ('Борщ', 'Обед', 250, 180),
-                    ('Котлета с пюре', 'Обед', 180, 320),
-                    ('Компот', 'Напитки', 200, 80)
-                ]
+                junior_items = [('Каша манная', 'Завтрак', 200, 210), ('Борщ', 'Обед', 250, 180), ('Котлета с пюре', 'Обед', 180, 320), ('Компот', 'Напитки', 200, 80)]
                 senior_items = [('Борщ', 'Обед', 450), ('Котлета с пюре', 'Обед', 550), ('Компот', 'Напитки', 150)]
             elif day == 'Вторник':
-                junior_items = [
-                    ('Овсяная каша', 'Завтрак', 200, 220),
-                    ('Суп куриный', 'Обед', 250, 190),
-                    ('Плов', 'Обед', 180, 340),
-                    ('Чай с молоком', 'Напитки', 200, 90)
-                ]
+                junior_items = [('Овсяная каша', 'Завтрак', 200, 220), ('Суп куриный', 'Обед', 250, 190), ('Плов', 'Обед', 180, 340), ('Чай с молоком', 'Напитки', 200, 90)]
                 senior_items = [('Суп куриный', 'Обед', 400), ('Плов', 'Обед', 600), ('Чай', 'Напитки', 100)]
             elif day == 'Среда':
-                junior_items = [
-                    ('Рисовая каша', 'Завтрак', 200, 230),
-                    ('Солянка', 'Обед', 250, 200),
-                    ('Рыба с рисом', 'Обед', 180, 310),
-                    ('Кисель', 'Напитки', 200, 100)
-                ]
+                junior_items = [('Рисовая каша', 'Завтрак', 200, 230), ('Солянка', 'Обед', 250, 200), ('Рыба с рисом', 'Обед', 180, 310), ('Кисель', 'Напитки', 200, 100)]
                 senior_items = [('Солянка', 'Обед', 480), ('Рыба с рисом', 'Обед', 650), ('Кисель', 'Напитки', 120)]
             elif day == 'Четверг':
-                junior_items = [
-                    ('Пшённая каша', 'Завтрак', 200, 215),
-                    ('Рассольник', 'Обед', 250, 185),
-                    ('Гречка с мясом', 'Обед', 180, 330),
-                    ('Сок', 'Напитки', 200, 110)
-                ]
+                junior_items = [('Пшённая каша', 'Завтрак', 200, 215), ('Рассольник', 'Обед', 250, 185), ('Гречка с мясом', 'Обед', 180, 330), ('Сок', 'Напитки', 200, 110)]
                 senior_items = [('Рассольник', 'Обед', 470), ('Гречка с мясом', 'Обед', 550), ('Сок', 'Напитки', 200)]
             else:
-                junior_items = [
-                    ('Кукурузная каша', 'Завтрак', 200, 225),
-                    ('Лагман', 'Обед', 250, 260),
-                    ('Макароны', 'Обед', 180, 300),
-                    ('Кофейный напиток', 'Напитки', 200, 95)
-                ]
+                junior_items = [('Кукурузная каша', 'Завтрак', 200, 225), ('Лагман', 'Обед', 250, 260), ('Макароны', 'Обед', 180, 300), ('Кофейный напиток', 'Напитки', 200, 95)]
                 senior_items = [('Лагман', 'Обед', 700), ('Макароны', 'Обед', 500), ('Кофе', 'Напитки', 250)]
             
             for item_name, category, weight, calories in junior_items:
-                rows.append({
-                    'week': week, 'day': day, 'menu_type': 'junior',
-                    'item_name': item_name, 'category': category,
-                    'price': 0, 'weight': weight, 'calories': calories, 'available': True
-                })
-            
+                rows.append({'week': week, 'day': day, 'menu_type': 'junior', 'item_name': item_name,
+                             'category': category, 'price': 0, 'weight': weight, 'calories': calories, 'available': True})
             for item_name, category, price in senior_items:
-                rows.append({
-                    'week': week, 'day': day, 'menu_type': 'senior',
-                    'item_name': item_name, 'category': category,
-                    'price': price, 'weight': 0, 'calories': 0, 'available': True
-                })
+                rows.append({'week': week, 'day': day, 'menu_type': 'senior', 'item_name': item_name,
+                             'category': category, 'price': price, 'weight': 0, 'calories': 0, 'available': True})
     
     default_menu = pd.DataFrame(rows)
     default_menu.to_csv(menu_file, index=False, encoding='utf-8-sig')
@@ -272,14 +196,10 @@ def load_menu_from_sheet():
                 try:
                     df = pd.read_csv(menu_file, encoding=encoding)
                     if not df.empty and 'day' in df.columns:
-                        if 'week' not in df.columns:
-                            df['week'] = 1
-                        if 'menu_type' not in df.columns:
-                            df['menu_type'] = 'senior'
-                        if 'weight' not in df.columns:
-                            df['weight'] = 0
-                        if 'calories' not in df.columns:
-                            df['calories'] = 0
+                        if 'week' not in df.columns: df['week'] = 1
+                        if 'menu_type' not in df.columns: df['menu_type'] = 'senior'
+                        if 'weight' not in df.columns: df['weight'] = 0
+                        if 'calories' not in df.columns: df['calories'] = 0
                         save_menu_to_sheet(df)
                         return df
                 except Exception:
@@ -296,11 +216,9 @@ def save_menu_to_sheet(menu_df):
 
 def add_new_item(week, day, menu_type, item_name, category, price=0, weight=0, calories=0, available=True):
     menu_df = load_menu_from_sheet()
-    new_item = pd.DataFrame({
-        'week': [week], 'day': [day], 'menu_type': [menu_type],
-        'item_name': [item_name], 'category': [category],
-        'price': [price], 'weight': [weight], 'calories': [calories], 'available': [available]
-    })
+    new_item = pd.DataFrame({'week': [week], 'day': [day], 'menu_type': [menu_type],
+                             'item_name': [item_name], 'category': [category],
+                             'price': [price], 'weight': [weight], 'calories': [calories], 'available': [available]})
     menu_df = pd.concat([menu_df, new_item], ignore_index=True)
     save_menu_to_sheet(menu_df)
     return True
@@ -309,11 +227,7 @@ def get_menu_by_week_day_type(week, day, menu_type):
     menu_df = load_menu_from_sheet()
     if menu_df.empty:
         return pd.DataFrame()
-    filtered = menu_df[
-        (menu_df['week'] == week) &
-        (menu_df['day'] == day) &
-        (menu_df['menu_type'] == menu_type)
-    ]
+    filtered = menu_df[(menu_df['week'] == week) & (menu_df['day'] == day) & (menu_df['menu_type'] == menu_type)]
     return filtered
 
 def is_junior_class(student_class):
@@ -335,23 +249,13 @@ def place_order(student_name, student_class, items, total_price, payment_method)
     order_number = generate_order_number()
     current_date = datetime.datetime.now()
     day_name = current_date.strftime("%A")
-    day_translation = {
-        'Monday': 'Понедельник', 'Tuesday': 'Вторник', 'Wednesday': 'Среда',
-        'Thursday': 'Четверг', 'Friday': 'Пятница', 'Saturday': 'Суббота', 'Sunday': 'Воскресенье'
-    }
+    day_translation = {'Monday': 'Понедельник', 'Tuesday': 'Вторник', 'Wednesday': 'Среда',
+                       'Thursday': 'Четверг', 'Friday': 'Пятница', 'Saturday': 'Суббота', 'Sunday': 'Воскресенье'}
     day_name_ru = day_translation.get(day_name, day_name)
     items_str = ", ".join([f"{item['name']} x{item['quantity']}" for item in items])
-    order_data = {
-        'order_number': order_number,
-        'date': current_date.strftime("%Y-%m-%d %H:%M:%S"),
-        'day': day_name_ru,
-        'student_name': student_name,
-        'student_class': student_class,
-        'items': items_str,
-        'total_price': total_price,
-        'payment_method': payment_method,
-        'status': 'pending'
-    }
+    order_data = {'order_number': order_number, 'date': current_date.strftime("%Y-%m-%d %H:%M:%S"),
+                  'day': day_name_ru, 'student_name': student_name, 'student_class': student_class,
+                  'items': items_str, 'total_price': total_price, 'payment_method': payment_method, 'status': 'pending'}
     orders_df = load_orders()
     orders_df = pd.concat([orders_df, pd.DataFrame([order_data])], ignore_index=True)
     save_orders(orders_df)
@@ -364,14 +268,12 @@ def update_reports(order_number, date, day_name, student_name, student_class, it
     monthly_df = load_monthly_report()
     date_str = date.strftime("%Y-%m-%d")
     for item in items:
-        new_entry = pd.DataFrame([{
-            'order_number': order_number, 'date': date_str, 'day': day_name,
-            'student_name': student_name, 'student_class': student_class,
-            'item': item['name'], 'category': item.get('category', ''),
-            'quantity': item['quantity'], 'price': item.get('price', 0),
-            'total_item_price': item.get('price', 0) * item['quantity'],
-            'order_total': total_price, 'payment_method': payment_method, 'status': 'pending'
-        }])
+        new_entry = pd.DataFrame([{'order_number': order_number, 'date': date_str, 'day': day_name,
+                                   'student_name': student_name, 'student_class': student_class,
+                                   'item': item['name'], 'category': item.get('category', ''),
+                                   'quantity': item['quantity'], 'price': item.get('price', 0),
+                                   'total_item_price': item.get('price', 0) * item['quantity'],
+                                   'order_total': total_price, 'payment_method': payment_method, 'status': 'pending'}])
         weekly_df = pd.concat([weekly_df, new_entry], ignore_index=True)
         monthly_df = pd.concat([monthly_df, new_entry], ignore_index=True)
     save_weekly_report(weekly_df)
@@ -402,23 +304,19 @@ def get_completed_orders():
         return orders_df[orders_df['status'] == 'completed']
     return pd.DataFrame()
 
-# --- QR Code Generation ---
+# --- QR Code ---
 def generate_qr(data):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(data)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    return img
+    return qr.make_image(fill_color="black", back_color="white")
 
 def generate_payment_qr(order_id, amount):
-    payment_data = f"PAYMENT:{order_id}:{amount}:{int(time.time())}"
-    return generate_qr(payment_data)
+    return generate_qr(f"PAYMENT:{order_id}:{amount}:{int(time.time())}")
 
 def generate_chef_qr():
-    chef_data = f"CHEF_QR:{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
-    return generate_qr(chef_data)
+    return generate_qr(f"CHEF_QR:{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}")
 
-# --- Chef Authentication ---
 def verify_chef_password(input_password):
     return input_password == "123*"
 
@@ -431,31 +329,22 @@ def main():
         st.markdown("""
             <div style="text-align: center; margin-bottom: 2rem;">
                 <div style="background-color: #f97316; display: inline-block; padding: 0.75rem; border-radius: 1.5rem; margin-bottom: 1rem;">🍽️</div>
-                <h1 style="font-size: 2rem; font-weight: 900; letter-spacing: -0.025em;">Столовая школы</h1>
+                <h1 style="font-size: 2rem; font-weight: 900;">Столовая школы</h1>
                 <p style="color: #64748b;">Закажи обед онлайн</p>
             </div>
         """, unsafe_allow_html=True)
     
-    if 'role' not in st.session_state:
-        st.session_state.role = "student"
-    if 'cart' not in st.session_state:
-        st.session_state.cart = []
-    if 'chef_authenticated' not in st.session_state:
-        st.session_state.chef_authenticated = False
-    if 'last_order_number' not in st.session_state:
-        st.session_state.last_order_number = None
+    if 'role' not in st.session_state: st.session_state.role = "student"
+    if 'cart' not in st.session_state: st.session_state.cart = []
+    if 'chef_authenticated' not in st.session_state: st.session_state.chef_authenticated = False
+    if 'last_order_number' not in st.session_state: st.session_state.last_order_number = None
     if 'selected_week' not in st.session_state:
         today = datetime.datetime.now()
-        if today.day <= 7:
-            st.session_state.selected_week = 1
-        elif today.day <= 14:
-            st.session_state.selected_week = 2
-        elif today.day <= 21:
-            st.session_state.selected_week = 3
-        else:
-            st.session_state.selected_week = 4
-    if 'student_class' not in st.session_state:
-        st.session_state.student_class = ""
+        if today.day <= 7: st.session_state.selected_week = 1
+        elif today.day <= 14: st.session_state.selected_week = 2
+        elif today.day <= 21: st.session_state.selected_week = 3
+        else: st.session_state.selected_week = 4
+    if 'student_class' not in st.session_state: st.session_state.student_class = ""
     
     with st.sidebar:
         st.markdown("### 🎯 Режим работы")
@@ -469,8 +358,7 @@ def main():
                 total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
                 for i, item in enumerate(st.session_state.cart):
                     c1, c2, c3 = st.columns([2, 1, 1])
-                    with c1:
-                        st.write(f"{item['name']}")
+                    with c1: st.write(f"{item['name']}")
                     with c2:
                         if item['price'] > 0:
                             st.write(f"{item['quantity']} x {item['price']}₸")
@@ -493,7 +381,6 @@ def main():
             else:
                 st.info("Корзина пуста.")
     
-    # --- Student View ---
     if st.session_state.role == "student":
         if st.session_state.last_order_number:
             st.markdown(f"""
@@ -546,7 +433,6 @@ def main():
             else:
                 all_categories = ['Все'] + list(menu_df['category'].unique())
                 selected_category = st.selectbox("Категория:", all_categories)
-                
                 filtered_menu = menu_df.copy()
                 if selected_category != 'Все':
                     filtered_menu = filtered_menu[filtered_menu['category'] == selected_category]
@@ -611,12 +497,10 @@ def main():
                 else:
                     st.info(f"На {selected_day} пока нет блюд в этой категории")
         
-        # --- Checkout ---
         if st.session_state.get('show_checkout', False):
             with st.expander("Оформление заказа", expanded=True):
                 st.markdown("### 📝 Информация о заказе")
                 total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
-                
                 student_name = st.text_input("Ваше имя")
                 student_class_final = st.text_input("Класс", value=st.session_state.student_class)
                 
@@ -677,7 +561,6 @@ def main():
                         else:
                             st.error("Пожалуйста, укажите имя и класс")
     
-    # --- Chef View ---
     else:
         if not st.session_state.chef_authenticated:
             st.markdown("### 🔐 Доступ повара")
@@ -692,23 +575,19 @@ def main():
         else:
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Меню", "➕ Добавить блюдо", "📦 Заказы", "📊 Отчеты", "🔐 QR"])
             
-            # --- TAB 1: Редактирование меню ---
+            # TAB 1: Редактирование меню
             with tab1:
                 st.markdown("### 📋 Редактирование меню")
                 c1, c2 = st.columns(2)
                 with c1:
-                    edit_week = st.selectbox("Неделя:", [1, 2, 3, 4],
-                        format_func=lambda x: f"{x}-я неделя", key="chef_edit_week")
+                    edit_week = st.selectbox("Неделя:", [1, 2, 3, 4], format_func=lambda x: f"{x}-я неделя", key="chef_edit_week")
                 with c2:
                     edit_type = st.selectbox("Тип меню:", ['junior', 'senior'],
                         format_func=lambda x: "🍎 1-4 классы (вес/калории)" if x == 'junior' else "🎓 5-11 классы (цены)",
                         key="chef_edit_type")
                 
                 menu_df = load_menu_from_sheet()
-                filtered_menu = menu_df[
-                    (menu_df['week'] == edit_week) &
-                    (menu_df['menu_type'] == edit_type)
-                ].copy()
+                filtered_menu = menu_df[(menu_df['week'] == edit_week) & (menu_df['menu_type'] == edit_type)].copy()
                 
                 st.markdown(f"#### Меню: {edit_week}-я неделя, {edit_type}")
                 
@@ -730,4 +609,20 @@ def main():
                         },
                         key=f"menu_editor_{edit_week}_{edit_type}"
                     )
-                    if st.button("💾 Сохранить изменения", key=f"save_menu_{edit_
+                    if st.button("💾 Сохранить изменения", key=f"save_menu_{edit_week}_{edit_type}"):
+                        others = menu_df[~((menu_df['week'] == edit_week) & (menu_df['menu_type'] == edit_type))]
+                        updated_menu = pd.concat([others, edited_df], ignore_index=True)
+                        save_menu_to_sheet(updated_menu)
+                        st.success("Меню обновлено!")
+                        st.rerun()
+                else:
+                    st.info("Меню пустое. Добавьте блюда во вкладке 'Добавить блюдо'.")
+            
+            # TAB 2: Добавление блюда
+            with tab2:
+                st.markdown("### ➕ Добавление блюда")
+                c1, c2 = st.columns(2)
+                with c1:
+                    new_week = st.selectbox("Неделя", [1, 2, 3, 4], format_func=lambda x: f"{x}-я неделя", key="new_item_week")
+                    new_day = st.selectbox("День", ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'], key="new_item_day")
+                    new_type = st.selectbox("Тип меню:", ['junior', 'sen
