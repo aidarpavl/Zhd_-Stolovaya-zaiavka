@@ -597,7 +597,7 @@ def main():
                 else:
                     st.success("🎉 Нет активных заказов")
 
-                       with t4:
+                                  with t4:
                 st.markdown("### 📊 Отчеты")
                 rt = st.radio("Тип:", ["Недельный", "Месячный"], horizontal=True)
                 if rt == "Недельный":
@@ -631,6 +631,10 @@ def main():
                     st.download_button("📥 Скачать", csv_data, fname, "text/csv")
                 else:
                     st.info("Нет данных")
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":
