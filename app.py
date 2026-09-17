@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -83,6 +83,16 @@ def load_css():
         .stAlert {
             border-radius: 1rem;
         }
+        /* === Стили для выбора недель === */
+        .week-badge {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            display: inline-block;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -147,7 +157,6 @@ def load_weekly_report():
         if os.path.exists(filepath):
             return pd.read_csv(filepath, encoding='utf-8-sig')
         else:
-            # Create empty DataFrame with correct columns
             return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status'])
     except Exception as e:
         return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status'])
@@ -171,7 +180,6 @@ def load_orders():
     try:
         if os.path.exists(filepath):
             df = pd.read_csv(filepath, encoding='utf-8-sig')
-            # Ensure all required columns exist
             required_columns = ['order_number', 'date', 'day', 'student_name', 'student_class', 'items', 'total_price', 'payment_method', 'status']
             for col in required_columns:
                 if col not in df.columns:
@@ -188,25 +196,45 @@ def save_orders(orders_df):
     filepath = os.path.join(REPORT_DIR, ORDERS_FILE)
     orders_df.to_csv(filepath, index=False, encoding='utf-8-sig')
 
-# --- Menu Management ---
+# --- Menu Management (ОБНОВЛЕНО: поддержка 4 недель) ---
 def create_default_menu():
-    """Create default menu file"""
+    """Create default menu file with 4 weeks support"""
     ensure_directories()
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     
-    default_menu = pd.DataFrame({
-        'day': ['Понедельник', 'Понедельник', 'Понедельник', 'Вторник', 'Вторник', 'Вторник', 'Среда', 'Среда', 'Среда', 'Четверг', 'Четверг', 'Четверг', 'Пятница', 'Пятница', 'Пятница'],
-        'item_name': ['Борщ', 'Котлета с пюре', 'Компот', 'Суп куриный', 'Плов', 'Чай', 'Солянка', 'Рыба с рисом', 'Кисель', 'Рассольник', 'Гречка с мясом', 'Сок', 'Лагман', 'Макароны', 'Кофе'],
-        'category': ['Обед', 'Обед', 'Напитки', 'Обед', 'Обед', 'Напитки', 'Обед', 'Обед', 'Напитки', 'Обед', 'Обед', 'Напитки', 'Обед', 'Обед', 'Напитки'],
-        'price': [450, 550, 150, 400, 600, 100, 480, 650, 120, 470, 550, 200, 700, 500, 250],
-        'available': [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
-    })
+    # Создаём меню для 4 недель (по умолчанию одинаковое)
+    rows = []
+    days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
+    for week in [1, 2, 3, 4]:
+        for day in days:
+            # Базовое меню (пример)
+            if day == 'Понедельник':
+                items = [('Борщ', 'Обед', 450), ('Котлета с пюре', 'Обед', 550), ('Компот', 'Напитки', 150)]
+            elif day == 'Вторник':
+                items = [('Суп куриный', 'Обед', 400), ('Плов', 'Обед', 600), ('Чай', 'Напитки', 100)]
+            elif day == 'Среда':
+                items = [('Солянка', 'Обед', 480), ('Рыба с рисом', 'Обед', 650), ('Кисель', 'Напитки', 120)]
+            elif day == 'Четверг':
+                items = [('Рассольник', 'Обед', 470), ('Гречка с мясом', 'Обед', 550), ('Сок', 'Напитки', 200)]
+            else:
+                items = [('Лагман', 'Обед', 700), ('Макароны', 'Обед', 500), ('Кофе', 'Напитки', 250)]
+            
+            for item_name, category, price in items:
+                rows.append({
+                    'week': week,
+                    'day': day,
+                    'item_name': item_name,
+                    'category': category,
+                    'price': price,
+                    'available': True
+                })
     
+    default_menu = pd.DataFrame(rows)
     default_menu.to_csv(menu_file, index=False, encoding='utf-8-sig')
     return default_menu
 
 def load_menu_from_sheet():
-    """Load weekly menu from CSV file"""
+    """Load weekly menu from CSV file with 4-week support"""
     ensure_directories()
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     
@@ -217,6 +245,10 @@ def load_menu_from_sheet():
                 try:
                     df = pd.read_csv(menu_file, encoding=encoding)
                     if not df.empty and 'day' in df.columns:
+                        # Миграция: если нет столбца 'week' — добавляем week=1 для всех
+                        if 'week' not in df.columns:
+                            df['week'] = 1
+                            save_menu_to_sheet(df)
                         return df
                 except:
                     continue
@@ -232,10 +264,11 @@ def save_menu_to_sheet(menu_df):
     menu_file = os.path.join(DATA_DIR, MENU_FILE)
     menu_df.to_csv(menu_file, index=False, encoding='utf-8-sig')
 
-def add_new_item(day, item_name, category, price, available=True):
-    """Add a new menu item"""
+def add_new_item(week, day, item_name, category, price, available=True):
+    """Add a new menu item for a specific week and day"""
     menu_df = load_menu_from_sheet()
     new_item = pd.DataFrame({
+        'week': [week],
         'day': [day],
         'item_name': [item_name],
         'category': [category],
@@ -245,6 +278,12 @@ def add_new_item(day, item_name, category, price, available=True):
     menu_df = pd.concat([menu_df, new_item], ignore_index=True)
     save_menu_to_sheet(menu_df)
     return True
+
+def get_menu_by_week_and_day(week, day):
+    """Get menu filtered by week and day"""
+    menu_df = load_menu_from_sheet()
+    filtered = menu_df[(menu_df['week'] == week) & (menu_df['day'] == day)]
+    return filtered
 
 # --- Order Management ---
 def generate_order_number():
@@ -405,6 +444,20 @@ def main():
         st.session_state.chef_authenticated = False
     if 'last_order_number' not in st.session_state:
         st.session_state.last_order_number = None
+    # === НОВОЕ: выбранная неделя ===
+    if 'selected_week' not in st.session_state:
+        # Определяем текущую неделю месяца (1-4)
+        today = datetime.datetime.now()
+        day_of_month = today.day
+        if day_of_month <= 7:
+            current_week = 1
+        elif day_of_month <= 14:
+            current_week = 2
+        elif day_of_month <= 21:
+            current_week = 3
+        else:
+            current_week = 4
+        st.session_state.selected_week = current_week
     
     # Sidebar
     with st.sidebar:
@@ -450,22 +503,48 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
         
-        menu_df = load_menu_from_sheet()
+        # === НОВОЕ: Выбор недели ===
+        st.markdown("### 📅 Выберите неделю")
+        week_options = {
+            1: "1-я неделя",
+            2: "2-я неделя",
+            3: "3-я неделя",
+            4: "4-я неделя"
+        }
+        
+        week_cols = st.columns(4)
+        for i, (week_num, week_label) in enumerate(week_options.items()):
+            with week_cols[i]:
+                is_current = (week_num == st.session_state.selected_week)
+                button_label = f"✅ {week_label}" if is_current else week_label
+                if st.button(button_label, key=f"week_btn_{week_num}", use_container_width=True):
+                    st.session_state.selected_week = week_num
+                    st.rerun()
+        
+        st.markdown(f"""
+            <div class="week-badge">
+                📆 Текущая неделя: {st.session_state.selected_week}-я неделя
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # === Выбор дня ===
+        days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
+        selected_day = st.selectbox("Выберите день:", days, index=0)
+        
+        # === Загрузка меню по выбранной неделе и дню ===
+        menu_df = get_menu_by_week_and_day(st.session_state.selected_week, selected_day)
         
         if menu_df.empty:
-            st.warning("Меню пока не загружено. Пожалуйста, зайдите позже.")
+            st.warning(f"Меню на {selected_day} ({st.session_state.selected_week}-я неделя) пока не загружено.")
         else:
-            days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
-            selected_day = st.selectbox("Выберите день:", days, index=0)
-            
             all_categories = ['Все'] + list(menu_df['category'].unique())
             selected_category = st.selectbox("Категория:", all_categories)
             
-            filtered_menu = menu_df[menu_df['day'] == selected_day]
+            filtered_menu = menu_df.copy()
             if selected_category != 'Все':
                 filtered_menu = filtered_menu[filtered_menu['category'] == selected_category]
             
-            st.markdown(f"### 🍽️ Меню на {selected_day}")
+            st.markdown(f"### 🍽️ Меню на {selected_day} ({st.session_state.selected_week}-я неделя)")
             
             if not filtered_menu.empty:
                 cols = st.columns(3)
@@ -485,9 +564,9 @@ def main():
                                 
                                 col1, col2 = st.columns([1, 1])
                                 with col1:
-                                    quantity = st.number_input("Кол-во", min_value=0, max_value=10, key=f"qty_{item['item_name']}_{idx}", label_visibility="collapsed")
+                                    quantity = st.number_input("Кол-во", min_value=0, max_value=10, key=f"qty_{st.session_state.selected_week}_{item['item_name']}_{idx}", label_visibility="collapsed")
                                 with col2:
-                                    if st.button("➕ В корзину", key=f"add_{item['item_name']}_{idx}", use_container_width=True):
+                                    if st.button("➕ В корзину", key=f"add_{st.session_state.selected_week}_{item['item_name']}_{idx}", use_container_width=True):
                                         if quantity > 0:
                                             found = False
                                             for cart_item in st.session_state.cart:
@@ -582,43 +661,72 @@ def main():
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Меню", "➕ Добавить блюдо", "📦 Заказы", "📊 Отчеты", "🔐 QR"])
             
             with tab1:
-                st.markdown("### Редактирование меню")
-                menu_df = load_menu_from_sheet()
+                st.markdown("### 📋 Редактирование меню по неделям")
                 
-                if not menu_df.empty:
+                # === НОВОЕ: Выбор недели для редактирования ===
+                edit_week = st.selectbox(
+                    "Выберите неделю для редактирования:",
+                    [1, 2, 3, 4],
+                    format_func=lambda x: f"{x}-я неделя",
+                    key="chef_edit_week"
+                )
+                
+                # Фильтруем меню по выбранной неделе
+                menu_df = load_menu_from_sheet()
+                week_menu = menu_df[menu_df['week'] == edit_week].copy()
+                
+                st.markdown(f"#### Меню на {edit_week}-ю неделю")
+                
+                if not week_menu.empty:
                     edited_df = st.data_editor(
-                        menu_df,
+                        week_menu,
                         use_container_width=True,
                         hide_index=True,
                         column_config={
+                            "week": st.column_config.NumberColumn("Неделя", min_value=1, max_value=4, disabled=True),
                             "day": st.column_config.SelectboxColumn("День", options=['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']),
                             "item_name": "Блюдо",
                             "category": st.column_config.SelectboxColumn("Категория", options=['Завтрак', 'Обед', 'Выпечка', 'Напитки']),
                             "price": st.column_config.NumberColumn("Цена (₸)", min_value=0, step=10),
                             "available": st.column_config.CheckboxColumn("Доступно")
-                        }
+                        },
+                        key=f"menu_editor_week_{edit_week}"
                     )
                     
-                    if st.button("💾 Сохранить изменения"):
-                        save_menu_to_sheet(edited_df)
-                        st.success("Меню обновлено!")
+                    if st.button("💾 Сохранить изменения", key=f"save_menu_week_{edit_week}"):
+                        # Удаляем старые записи этой недели и добавляем обновлённые
+                        other_weeks = menu_df[menu_df['week'] != edit_week]
+                        updated_menu = pd.concat([other_weeks, edited_df], ignore_index=True)
+                        save_menu_to_sheet(updated_menu)
+                        st.success(f"Меню на {edit_week}-ю неделю обновлено!")
                         st.rerun()
+                else:
+                    st.info(f"Меню на {edit_week}-ю неделю пустое. Добавьте блюда ниже.")
             
             with tab2:
-                st.markdown("### Добавление блюда")
+                st.markdown("### ➕ Добавление блюда")
                 col1, col2 = st.columns(2)
                 with col1:
-                    new_day = st.selectbox("День", ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'])
-                    new_item_name = st.text_input("Название")
+                    # === НОВОЕ: выбор недели при добавлении ===
+                    new_week = st.selectbox(
+                        "Неделя",
+                        [1, 2, 3, 4],
+                        format_func=lambda x: f"{x}-я неделя",
+                        key="new_item_week"
+                    )
+                    new_day = st.selectbox("День", ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'], key="new_item_day")
+                    new_item_name = st.text_input("Название", key="new_item_name")
                 with col2:
-                    new_category = st.selectbox("Категория", ['Завтрак', 'Обед', 'Выпечка', 'Напитки'])
-                    new_price = st.number_input("Цена (₸)", min_value=0, step=10)
+                    new_category = st.selectbox("Категория", ['Завтрак', 'Обед', 'Выпечка', 'Напитки'], key="new_item_cat")
+                    new_price = st.number_input("Цена (₸)", min_value=0, step=10, key="new_item_price")
                 
-                if st.button("➕ Добавить"):
+                if st.button("➕ Добавить", key="add_new_item_btn"):
                     if new_item_name and new_price > 0:
-                        add_new_item(new_day, new_item_name, new_category, new_price)
-                        st.success(f"Добавлено: {new_item_name}")
+                        add_new_item(new_week, new_day, new_item_name, new_category, new_price)
+                        st.success(f"Добавлено: {new_item_name} на {new_week}-ю неделю, {new_day}")
                         st.rerun()
+                    else:
+                        st.error("Заполните название и цену")
             
             with tab3:
                 st.markdown("### 📦 Выдача заказов")
@@ -661,74 +769,5 @@ def main():
                 if report_type == "Недельный":
                     df = load_weekly_report()
                     if not df.empty and 'order_number' in df.columns:
-                        # Safely get summary data
                         completed_count = len(df[df['status'] == 'completed']['order_number'].unique()) if 'status' in df.columns else 0
-                        pending_count = len(df[df['status'] == 'pending']['order_number'].unique()) if 'status' in df.columns else 0
-                        total_revenue = df['order_total'].sum() if 'order_total' in df.columns else 0
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("✅ Выдано", completed_count)
-                        with col2:
-                            st.metric("⏳ Ожидают", pending_count)
-                        with col3:
-                            st.metric("💰 Выручка", f"{total_revenue:,.0f}₸")
-                        
-                        # Display orders summary
-                        if 'order_number' in df.columns and 'date' in df.columns and 'student_name' in df.columns and 'total_price' in df.columns:
-                            display_df = df[['order_number', 'date', 'student_name', 'total_price', 'payment_method', 'status']].drop_duplicates(subset=['order_number'])
-                            st.dataframe(display_df, use_container_width=True)
-                        else:
-                            st.info("Недостаточно данных для отображения")
-                        
-                        csv = df.to_csv(index=False).encode('utf-8-sig')
-                        st.download_button("📥 Скачать отчет", csv, WEEKLY_REPORT_FILE, "text/csv")
-                    else:
-                        st.info("Нет данных за неделю")
-                
-                else:
-                    df = load_monthly_report()
-                    if not df.empty and 'order_number' in df.columns:
-                        completed_count = len(df[df['status'] == 'completed']['order_number'].unique()) if 'status' in df.columns else 0
-                        pending_count = len(df[df['status'] == 'pending']['order_number'].unique()) if 'status' in df.columns else 0
-                        total_revenue = df['order_total'].sum() if 'order_total' in df.columns else 0
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("✅ Выдано", completed_count)
-                        with col2:
-                            st.metric("⏳ Ожидают", pending_count)
-                        with col3:
-                            st.metric("💰 Выручка", f"{total_revenue:,.0f}₸")
-                        
-                        if 'order_number' in df.columns and 'date' in df.columns and 'student_name' in df.columns and 'total_price' in df.columns:
-                            display_df = df[['order_number', 'date', 'student_name', 'total_price', 'payment_method', 'status']].drop_duplicates(subset=['order_number'])
-                            st.dataframe(display_df, use_container_width=True)
-                        else:
-                            st.info("Недостаточно данных для отображения")
-                        
-                        csv = df.to_csv(index=False).encode('utf-8-sig')
-                        st.download_button("📥 Скачать отчет", csv, MONTHLY_REPORT_FILE, "text/csv")
-                    else:
-                        st.info("Нет данных за месяц")
-            
-            with tab5:
-                st.markdown("### 🔐 QR-код повара")
-                
-                if st.button("🔄 Сгенерировать QR"):
-                    qr_img = generate_chef_qr()
-                    buf = BytesIO()
-                    qr_img.save(buf, format="PNG")
-                    st.session_state.chef_qr = buf.getvalue()
-                
-                if st.session_state.get('chef_qr'):
-                    st.image(st.session_state.chef_qr, caption="QR повара", width=250)
-                    st.download_button("📥 Скачать QR", st.session_state.chef_qr, "chef_qr.png", "image/png")
-                
-                st.markdown("---")
-                if st.button("🚪 Выйти"):
-                    st.session_state.chef_authenticated = False
-                    st.rerun()
-
-if __name__ == "__main__":
-    main()
+                        pending_count = len(df[df['status'] == 'pending']['order_number'].unique()) if 'status
