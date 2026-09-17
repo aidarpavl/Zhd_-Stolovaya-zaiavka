@@ -196,10 +196,14 @@ def load_menu_from_sheet():
                 try:
                     df = pd.read_csv(menu_file, encoding=encoding)
                     if not df.empty and 'day' in df.columns:
-                        if 'week' not in df.columns: df['week'] = 1
-                        if 'menu_type' not in df.columns: df['menu_type'] = 'senior'
-                        if 'weight' not in df.columns: df['weight'] = 0
-                        if 'calories' not in df.columns: df['calories'] = 0
+                        if 'week' not in df.columns:
+                            df['week'] = 1
+                        if 'menu_type' not in df.columns:
+                            df['menu_type'] = 'senior'
+                        if 'weight' not in df.columns:
+                            df['weight'] = 0
+                        if 'calories' not in df.columns:
+                            df['calories'] = 0
                         save_menu_to_sheet(df)
                         return df
                 except Exception:
@@ -381,6 +385,7 @@ def main():
             else:
                 st.info("Корзина пуста.")
     
+    # --- Student View ---
     if st.session_state.role == "student":
         if st.session_state.last_order_number:
             st.markdown(f"""
@@ -561,6 +566,7 @@ def main():
                         else:
                             st.error("Пожалуйста, укажите имя и класс")
     
+    # --- Chef View ---
     else:
         if not st.session_state.chef_authenticated:
             st.markdown("### 🔐 Доступ повара")
@@ -575,12 +581,13 @@ def main():
         else:
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Меню", "➕ Добавить блюдо", "📦 Заказы", "📊 Отчеты", "🔐 QR"])
             
-            # TAB 1: Редактирование меню
+            # --- TAB 1: Редактирование меню ---
             with tab1:
                 st.markdown("### 📋 Редактирование меню")
                 c1, c2 = st.columns(2)
                 with c1:
-                    edit_week = st.selectbox("Неделя:", [1, 2, 3, 4], format_func=lambda x: f"{x}-я неделя", key="chef_edit_week")
+                    edit_week = st.selectbox("Неделя:", [1, 2, 3, 4],
+                        format_func=lambda x: f"{x}-я неделя", key="chef_edit_week")
                 with c2:
                     edit_type = st.selectbox("Тип меню:", ['junior', 'senior'],
                         format_func=lambda x: "🍎 1-4 классы (вес/калории)" if x == 'junior' else "🎓 5-11 классы (цены)",
@@ -618,11 +625,12 @@ def main():
                 else:
                     st.info("Меню пустое. Добавьте блюда во вкладке 'Добавить блюдо'.")
             
-            # TAB 2: Добавление блюда
+            # --- TAB 2: Добавление блюда ---
             with tab2:
                 st.markdown("### ➕ Добавление блюда")
                 c1, c2 = st.columns(2)
                 with c1:
-                    new_week = st.selectbox("Неделя", [1, 2, 3, 4], format_func=lambda x: f"{x}-я неделя", key="new_item_week")
+                    new_week = st.selectbox("Неделя", [1, 2, 3, 4],
+                        format_func=lambda x: f"{x}-я неделя", key="new_item_week")
                     new_day = st.selectbox("День", ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'], key="new_item_day")
-                    new_type = st.selectbox("Тип меню:", ['junior', 'sen
+                    new_type = st
