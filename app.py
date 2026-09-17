@@ -283,6 +283,9 @@ def main():
         st.session_state.selected_week = 1 if d <= 7 else 2 if d <= 14 else 3 if d <= 21 else 4
     if 'student_class' not in st.session_state: st.session_state.student_class = ""
 
+    # === Инициализация счётчиков количества ===
+    if 'qty_state' not in st.session_state: st.session_state.qty_state = {}
+
     with st.sidebar:
         st.markdown("### 🎯 Режим работы")
         role = st.radio("Роль:", ["Ученик", "Повар"], horizontal=True)
@@ -375,22 +378,55 @@ def main():
                                         st.markdown(f"**{item['item_name']}**  \n*{item['category']}*  \n🔢 Кол-во: {w} • 🔥 {cal} ккал")
                                     else:
                                         st.markdown(f"**{item['item_name']}**  \n*{item['category']}*  \n💰 {int(item['price'])}₸")
-                                    c1, c2 = st.columns([1, 1])
+
+                                    # === Ключ для этого блюда ===
+                                    qty_key = f"qty_{st.session_state.selected_week}_{item['item_name']}_{idx}"
+                                    if qty_key not in st.session_state.qty_state:
+                                        st.session_state.qty_state[qty_key] = 1
+
+                                    # === Кнопки - 1 - для выбора количества ===
+                                    c1, c2, c3 = st.columns([1, 2, 1])
                                     with c1:
-                                        q = st.number_input("Кол-во", min_value=0, max_value=10, key=f"q_{st.session_state.selected_week}_{item['item_name']}_{idx}", label_visibility="collapsed")
+                                        if st.button("➖", key=f"minus_{qty_key}", use_container_width=True):
+                                            cur = st.session_state.qty_state.get(qty_key, 1)
+                                            if cur > 0:
+                                                st.session_state.qty_state[qty_key] = cur - 1
+                                            st.rerun()
                                     with c2:
-                                        if st.button("➕ В корзину", key=f"a_{st.session_state.selected_week}_{item['item_name']}_{idx}", use_container_width=True):
-                                            if q > 0:
-                                                found = False
-                                                for x in st.session_state.cart:
-                                                    if x['name'] == item['item_name']:
-                                                        x['quantity'] += q
-                                                        found = True
-                                                        break
-                                                if not found:
-                                                    st.session_state.cart.append({'name':item['item_name'],'price':int(item['price']) if not is_jr else 0,'quantity':q,'category':item['category']})
-                                                st.success(f"Добавлено {q}")
-                                                st.rerun()
+                                        q = st.number_input(
+                                            "Кол-во",
+                                            min_value=0,
+                                            step=1,
+                                            key=f"num_{qty_key}",
+                                            value=st.session_state.qty_state.get(qty_key, 1),
+                                            label_visibility="collapsed"
+                                        )
+                                        st.session_state.qty_state[qty_key] = q
+                                    with c3:
+                                        if st.button("➕", key=f"plus_{qty_key}", use_container_width=True):
+                                            cur = st.session_state.qty_state.get(qty_key, 1)
+                                            st.session_state.qty_state[qty_key] = cur + 1
+                                            st.rerun()
+
+                                    if st.button("🛒 В корзину", key=f"add_{qty_key}", use_container_width=True):
+                                        qval = st.session_state.qty_state.get(qty_key, 1)
+                                        if qval > 0:
+                                            found = False
+                                            for x in st.session_state.cart:
+                                                if x['name'] == item['item_name']:
+                                                    x['quantity'] += qval
+                                                    found = True
+                                                    break
+                                            if not found:
+                                                st.session_state.cart.append({
+                                                    'name': item['item_name'],
+                                                    'price': int(item['price']) if not is_jr else 0,
+                                                    'quantity': qval,
+                                                    'category': item['category']
+                                                })
+                                            st.success(f"Добавлено {qval} x {item['item_name']}")
+                                            st.session_state.qty_state[qty_key] = 1
+                                            st.rerun()
 
         if st.session_state.get('show_checkout', False):
             with st.expander("Оформление", expanded=True):
@@ -584,10 +620,4 @@ def main():
                     with c2: st.metric("⏳ Ожидают", pc)
                     with c3: st.metric("💰 Выручка", f"{tr:,.0f}₸")
                     csv_data = df.to_csv(index=False).encode('utf-8-sig')
-                    fname = WEEKLY_REPORT_FILE if rt == "Недельный" else MONTHLY_REPORT_FILE
-                    st.download_button("📥 Скачать", csv_data, fname, "text/csv")
-                else:
-                    st.info("Нет данных")
-
-if __name__ == "__main__":
-    main()
+                    fname = WEEKLY_REPORT_FILE if rt ==
