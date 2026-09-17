@@ -8,6 +8,62 @@ import os
 
 st.set_page_config(page_title="SchoolEats", page_icon="🍽️", layout="wide")
 
+def load_css():
+    st.markdown("""
+    <style>
+        .main .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
+        body { background-color: #f8fafc; }
+        .card {
+            background: white; border-radius: 2rem; padding: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05);
+            transition: all 0.3s ease; border: 1px solid #f1f5f9;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 25px 30px -12px rgb(0 0 0 / 0.15); }
+        .card-junior { background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; }
+        .stButton > button,
+        .stFormSubmitButton > button,
+        .stDownloadButton > button {
+            border-radius: 1rem !important;
+            font-weight: 700 !important;
+            background-color: #f97316 !important;
+            color: white !important;
+            border: none !important;
+            transition: all 0.2s ease !important;
+        }
+        .stButton > button:hover,
+        .stFormSubmitButton > button:hover,
+        .stDownloadButton > button:hover {
+            background-color: #ea580c !important;
+            transform: scale(0.98);
+        }
+        [data-testid="stSidebar"] { background-color: white; border-right: 1px solid #f1f5f9; }
+        .order-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 1rem; border-radius: 1rem;
+            text-align: center; font-size: 1.5rem; font-weight: bold; margin: 1rem 0;
+        }
+        .week-badge {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
+            display: inline-block; font-weight: 700; margin-bottom: 1rem;
+        }
+        .class-badge {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
+            display: inline-block; font-weight: 700; margin-bottom: 1rem;
+        }
+        footer { visibility: hidden; }
+        .stAlert { border-radius: 1rem; }
+        .info-chip {
+            background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem; font-size: 0.75rem;
+            display: inline-block; margin-right: 0.5rem; margin-top: 0.5rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+load_css()
+
 def ensure_directories():
     if not os.path.exists('reports'):
         os.makedirs('reports')
@@ -316,7 +372,7 @@ def main():
                                     if is_jr:
                                         w = int(item.get('weight', 0)) if pd.notna(item.get('weight', 0)) else 0
                                         cal = int(item.get('calories', 0)) if pd.notna(item.get('calories', 0)) else 0
-                                        st.markdown(f"**{item['item_name']}**  \n*{item['category']}*  \n⚖️ {w} г • 🔥 {cal} ккал")
+                                        st.markdown(f"**{item['item_name']}**  \n*{item['category']}*  \n🔢 Кол-во: {w} • 🔥 {cal} ккал")
                                     else:
                                         st.markdown(f"**{item['item_name']}**  \n*{item['category']}*  \n💰 {int(item['price'])}₸")
                                     c1, c2 = st.columns([1, 1])
@@ -379,7 +435,7 @@ def main():
             t1, t2, t3, t4 = st.tabs(["📋 Меню", "➕ Добавить", "📦 Заказы", "📊 Отчеты"])
 
             with t1:
-                st.markdown("### 📋 Редактирование меню (с удалением строк)")
+                st.markdown("### 📋 Редактирование меню")
                 c1, c2 = st.columns(2)
                 with c1:
                     ew = st.selectbox("Неделя:", [1,2,3,4], format_func=lambda x: f"{x}-я неделя", key="ew")
@@ -393,7 +449,7 @@ def main():
                 fm = mdf[mask].copy()
 
                 if fm.empty:
-                    st.info("Меню пустое.")
+                    st.info("Меню пустое. Добавьте блюда ниже или во вкладке «➕ Добавить».")
                 else:
                     disp = fm.copy()
                     disp.insert(0, '_del', False)
@@ -410,7 +466,7 @@ def main():
                             "item_name": st.column_config.TextColumn("Блюдо", required=True),
                             "category": st.column_config.SelectboxColumn("Категория", options=['Завтрак','Обед','Выпечка','Напитки','Салаты','Первое','Второе']),
                             "price": st.column_config.NumberColumn("Цена ₸", min_value=0, step=10),
-                            "weight": st.column_config.NumberColumn("Вес г", min_value=0, step=10),
+                            "weight": st.column_config.NumberColumn("Кол-во", min_value=0, step=10),
                             "calories": st.column_config.NumberColumn("Ккал", min_value=0, step=10),
                             "available": st.column_config.CheckboxColumn("Дост.", default=True)
                         },
@@ -465,7 +521,7 @@ def main():
                     with fc4:
                         qp = st.number_input("Цена ₸", min_value=0, step=10)
                     with fc5:
-                        qw = st.number_input("Вес г", min_value=0, step=10)
+                        qw = st.number_input("Кол-во", min_value=0, step=10)
                     with fc6:
                         qcal = st.number_input("Ккал", min_value=0, step=10)
                     if st.form_submit_button("➕ Добавить", use_container_width=True):
@@ -488,7 +544,7 @@ def main():
                 with c2:
                     nc = st.selectbox("Категория", ['Завтрак','Обед','Выпечка','Напитки','Салаты','Первое','Второе'], key="nc")
                     np = st.number_input("Цена ₸", min_value=0, step=10, key="np")
-                    nwt = st.number_input("Вес г", min_value=0, step=10, key="nwt")
+                    nwt = st.number_input("Кол-во", min_value=0, step=10, key="nwt")
                     ncl = st.number_input("Ккал", min_value=0, step=10, key="ncl")
                 if st.button("➕ Добавить", key="addbtn"):
                     if nn:
@@ -535,4 +591,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
