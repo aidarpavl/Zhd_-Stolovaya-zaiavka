@@ -152,42 +152,44 @@ def load_weekly_report():
     """Load weekly report from CSV"""
     ensure_report_dir()
     filepath = os.path.join(REPORT_DIR, WEEKLY_REPORT_FILE)
+    cols = ['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status']
     try:
         if os.path.exists(filepath):
             return pd.read_csv(filepath, encoding='utf-8-sig')
         else:
-            return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status'])
-    except Exception as e:
-        return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status'])
+            return pd.DataFrame(columns=cols)
+    except Exception:
+        return pd.DataFrame(columns=cols)
 
 def load_monthly_report():
     """Load monthly report from CSV"""
     ensure_report_dir()
     filepath = os.path.join(REPORT_DIR, MONTHLY_REPORT_FILE)
+    cols = ['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status']
     try:
         if os.path.exists(filepath):
             return pd.read_csv(filepath, encoding='utf-8-sig')
         else:
-            return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status'])
-    except Exception as e:
-        return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'item', 'category', 'quantity', 'price', 'total_item_price', 'order_total', 'payment_method', 'status'])
+            return pd.DataFrame(columns=cols)
+    except Exception:
+        return pd.DataFrame(columns=cols)
 
 def load_orders():
     """Load all orders"""
     ensure_report_dir()
     filepath = os.path.join(REPORT_DIR, ORDERS_FILE)
+    cols = ['order_number', 'date', 'day', 'student_name', 'student_class', 'items', 'total_price', 'payment_method', 'status']
     try:
         if os.path.exists(filepath):
             df = pd.read_csv(filepath, encoding='utf-8-sig')
-            required_columns = ['order_number', 'date', 'day', 'student_name', 'student_class', 'items', 'total_price', 'payment_method', 'status']
-            for col in required_columns:
+            for col in cols:
                 if col not in df.columns:
                     df[col] = ''
             return df
         else:
-            return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'items', 'total_price', 'payment_method', 'status'])
-    except Exception as e:
-        return pd.DataFrame(columns=['order_number', 'date', 'day', 'student_name', 'student_class', 'items', 'total_price', 'payment_method', 'status'])
+            return pd.DataFrame(columns=cols)
+    except Exception:
+        return pd.DataFrame(columns=cols)
 
 def save_orders(orders_df):
     """Save all orders"""
@@ -246,12 +248,12 @@ def load_menu_from_sheet():
                             df['week'] = 1
                             save_menu_to_sheet(df)
                         return df
-                except:
+                except Exception:
                     continue
             return create_default_menu()
         else:
             return create_default_menu()
-    except Exception as e:
+    except Exception:
         return create_default_menu()
 
 def save_menu_to_sheet(menu_df):
@@ -278,6 +280,8 @@ def add_new_item(week, day, item_name, category, price, available=True):
 def get_menu_by_week_and_day(week, day):
     """Get menu filtered by week and day"""
     menu_df = load_menu_from_sheet()
+    if menu_df.empty:
+        return pd.DataFrame()
     filtered = menu_df[(menu_df['week'] == week) & (menu_df['day'] == day)]
     return filtered
 
@@ -558,9 +562,19 @@ def main():
                                 
                                 col1, col2 = st.columns([1, 1])
                                 with col1:
-                                    quantity = st.number_input("Кол-во", min_value=0, max_value=10, key=f"qty_{st.session_state.selected_week}_{item['item_name']}_{idx}", label_visibility="collapsed")
+                                    quantity = st.number_input(
+                                        "Кол-во",
+                                        min_value=0,
+                                        max_value=10,
+                                        key=f"qty_{st.session_state.selected_week}_{item['item_name']}_{idx}",
+                                        label_visibility="collapsed"
+                                    )
                                 with col2:
-                                    if st.button("➕ В корзину", key=f"add_{st.session_state.selected_week}_{item['item_name']}_{idx}", use_container_width=True):
+                                    if st.button(
+                                        "➕ В корзину",
+                                        key=f"add_{st.session_state.selected_week}_{item['item_name']}_{idx}",
+                                        use_container_width=True
+                                    ):
                                         if quantity > 0:
                                             found = False
                                             for cart_item in st.session_state.cart:
@@ -759,9 +773,16 @@ def main():
                 if report_type == "Недельный":
                     df = load_weekly_report()
                     if not df.empty and 'order_number' in df.columns:
-                        completed_count = len(df[df['status'] == 'completed']['order_number'].unique()) if 'status' in df.columns else 0
-                        pending_count = len(df[df['status'] == 'pending']['order_number'].unique()) if 'status' in df.columns else 0
-                        total_revenue = df['order_total'].sum() if 'order_total' in df.columns else 0
+                        completed_count = 0
+                        pending_count = 0
+                        total_revenue = 0
+                        
+                        if 'status' in df.columns:
+                            completed_count = len(df[df['status'] == 'completed']['order_number'].unique())
+                            pending_count = len(df[df['status'] == 'pending']['order_number'].unique())
+                        
+                        if 'order_total' in df.columns:
+                            total_revenue = df['order_total'].sum()
                         
                         col1, col2, col3 = st.columns(3)
                         with col1:
@@ -771,5 +792,17 @@ def main():
                         with col3:
                             st.metric("💰 Выручка", f"{total_revenue:,.0f}₸")
                         
-                        if 'order_number' in df.columns and 'date' in df.columns and 'student_name' in df.columns and 'total_price' in df.columns:
-                            display_df = df[['order_number', 'date', 'student_name', 'total_price',
+                        display_cols = [c for c in ['order_number', 'date', 'student_name', 'total_price', 'payment_method', 'status'] if c in df.columns]
+                        if display_cols:
+                            display_df = df[display_cols].drop_duplicates(subset=['order_number']) if 'order_number' in display_cols else df[display_cols]
+                            st.dataframe(display_df, use_container_width=True)
+                        else:
+                            st.info("Недостаточно данных для отображения")
+                        
+                        csv = df.to_csv(index=False).encode('utf-8-sig')
+                        st.download_button("📥 Скачать отчет", csv, WEEKLY_REPORT_FILE, "text/csv")
+                    else:
+                        st.info("Нет данных за неделю")
+                
+                else:
+                    df
