@@ -11,30 +11,83 @@ import time
 import os
 import csv
 
-st.set_page_config(page_title="SchoolEats", page_icon="🍽️", layout="wide")
+# --- Page Configuration ---
+st.set_page_config(
+    page_title="SchoolEats - Школьная столовая",
+    page_icon="🍽️",
+    layout="wide",
+    initial_sidebar_state="auto"
+)
 
+# --- Custom CSS ---
 def load_css():
     st.markdown("""
     <style>
-        .card { background: white; border-radius: 2rem; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05); border: 1px solid #f1f5f9; }
+        .main .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
+        body { background-color: #f8fafc; }
+        .card {
+            background: white; border-radius: 2rem; padding: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05);
+            transition: all 0.3s ease; border: 1px solid #f1f5f9;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 25px 30px -12px rgb(0 0 0 / 0.15); }
         .card-junior { background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; }
-        .stButton > button { border-radius: 1rem !important; font-weight: 700 !important; background-color: #f97316 !important; color: white !important; border: none !important; }
-        .order-number { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 1rem; text-align: center; font-size: 1.5rem; font-weight: bold; margin: 1rem 0; }
-        .week-badge { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 0.5rem 1rem; border-radius: 1rem; display: inline-block; font-weight: 700; margin-bottom: 1rem; }
-        .class-badge { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 0.5rem 1rem; border-radius: 1rem; display: inline-block; font-weight: 700; margin-bottom: 1rem; }
-        .info-chip { background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-size: 0.75rem; display: inline-block; margin-right: 0.5rem; margin-top: 0.5rem; }
+        .stButton > button {
+            border-radius: 1rem !important; font-weight: 700 !important;
+            background-color: #f97316 !important; color: white !important; border: none !important;
+        }
+        .stButton > button:hover { background-color: #ea580c !important; }
+        [data-testid="stSidebar"] { background-color: white; border-right: 1px solid #f1f5f9; }
+        .order-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 1rem; border-radius: 1rem;
+            text-align: center; font-size: 1.5rem; font-weight: bold; margin: 1rem 0;
+        }
+        .week-badge {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
+            display: inline-block; font-weight: 700; margin-bottom: 1rem;
+        }
+        .class-badge {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white; padding: 0.5rem 1rem; border-radius: 1rem;
+            display: inline-block; font-weight: 700; margin-bottom: 1rem;
+        }
         footer { visibility: hidden; }
+        .stAlert { border-radius: 1rem; }
+        .info-chip {
+            background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem; font-size: 0.75rem;
+            display: inline-block; margin-right: 0.5rem; margin-top: 0.5rem;
+        }
     </style>
     """, unsafe_allow_html=True)
 
 load_css()
 
+# --- Ensure directories exist ---
 def ensure_directories():
     if not os.path.exists('reports'):
         os.makedirs('reports')
     if not os.path.exists('data'):
         os.makedirs('data')
 
+# --- Google Sheets Setup (Optional) ---
+def init_google_sheets():
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        if 'gcp_service_account' in st.secrets:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            client = gspread.authorize(creds)
+            weekly_sheet = client.open_by_key("1PIpuFT2UNT00HDJsV-U74hod5KGNckqlmGADknlQaW8").sheet1
+            orders_sheet = client.open_by_key("1Zo1APRjQ3hvyR1nYcYNeFn7j3WOnaUfFStVpICtTGYQ").sheet1
+            return weekly_sheet, orders_sheet
+    except Exception:
+        pass
+    return None, None
+
+# --- CSV File Setup ---
 REPORT_DIR = "reports"
 DATA_DIR = "data"
 WEEKLY_REPORT_FILE = "Stolovaia ZHD1.csv"
@@ -42,16 +95,19 @@ MONTHLY_REPORT_FILE = "Stol_Zhd month1.csv"
 ORDERS_FILE = "orders.csv"
 MENU_FILE = "menu.csv"
 
-def save_weekly_report(data):
+def ensure_report_dir():
     ensure_directories()
+
+def save_weekly_report(data):
+    ensure_report_dir()
     pd.DataFrame(data).to_csv(os.path.join(REPORT_DIR, WEEKLY_REPORT_FILE), index=False, encoding='utf-8-sig')
 
 def save_monthly_report(data):
-    ensure_directories()
+    ensure_report_dir()
     pd.DataFrame(data).to_csv(os.path.join(REPORT_DIR, MONTHLY_REPORT_FILE), index=False, encoding='utf-8-sig')
 
 def load_weekly_report():
-    ensure_directories()
+    ensure_report_dir()
     fp = os.path.join(REPORT_DIR, WEEKLY_REPORT_FILE)
     cols = ['order_number','date','day','student_name','student_class','item','category','quantity','price','total_item_price','order_total','payment_method','status']
     try:
@@ -62,7 +118,7 @@ def load_weekly_report():
     return pd.DataFrame(columns=cols)
 
 def load_monthly_report():
-    ensure_directories()
+    ensure_report_dir()
     fp = os.path.join(REPORT_DIR, MONTHLY_REPORT_FILE)
     cols = ['order_number','date','day','student_name','student_class','item','category','quantity','price','total_item_price','order_total','payment_method','status']
     try:
@@ -73,7 +129,7 @@ def load_monthly_report():
     return pd.DataFrame(columns=cols)
 
 def load_orders():
-    ensure_directories()
+    ensure_report_dir()
     fp = os.path.join(REPORT_DIR, ORDERS_FILE)
     cols = ['order_number','date','day','student_name','student_class','items','total_price','payment_method','status']
     try:
@@ -88,9 +144,10 @@ def load_orders():
     return pd.DataFrame(columns=cols)
 
 def save_orders(odf):
-    ensure_directories()
+    ensure_report_dir()
     odf.to_csv(os.path.join(REPORT_DIR, ORDERS_FILE), index=False, encoding='utf-8-sig')
 
+# --- Menu Management ---
 def create_default_menu():
     ensure_directories()
     rows = []
@@ -165,6 +222,7 @@ def is_junior_class(cls):
         pass
     return False
 
+# --- Order Management ---
 def generate_order_number():
     return f"ORD-{datetime.datetime.now().strftime('%Y%m%d')}-{str(int(time.time()))[-4:]}"
 
@@ -219,6 +277,7 @@ def get_completed_orders():
         return odf[odf['status']=='completed']
     return pd.DataFrame()
 
+# --- QR Code ---
 def generate_qr(data):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(data)
@@ -234,6 +293,7 @@ def generate_chef_qr():
 def verify_chef_password(p):
     return p == "123*"
 
+# --- Main App ---
 def main():
     ensure_directories()
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -287,6 +347,7 @@ def main():
             else:
                 st.info("Корзина пуста")
 
+    # --- Student View ---
     if st.session_state.role == "student":
         if st.session_state.last_order_number:
             st.markdown(f'<div class="order-number">🎫 Номер заказа: <strong>{st.session_state.last_order_number}</strong></div>', unsafe_allow_html=True)
@@ -366,6 +427,8 @@ def main():
                                                     st.session_state.cart.append({'name':item['item_name'],'price':int(item['price']) if not is_jr else 0,'quantity':q,'category':item['category']})
                                                 st.success(f"Добавлено {q}")
                                                 st.rerun()
+
+        # --- Checkout ---
         if st.session_state.get('show_checkout', False):
             with st.expander("Оформление", expanded=True):
                 total = sum(i['price']*i['quantity'] for i in st.session_state.cart)
@@ -420,6 +483,7 @@ def main():
                                 time.sleep(2)
                                 st.rerun()
 
+    # --- Chef View ---
     else:
         if not st.session_state.chef_authenticated:
             st.markdown("### 🔐 Доступ повара")
@@ -433,107 +497,125 @@ def main():
         else:
             t1, t2, t3, t4, t5 = st.tabs(["📋 Меню", "➕ Добавить", "📦 Заказы", "📊 Отчеты", "🔐 QR"])
 
+            # --- TAB 1: Редактирование меню (с удалением строк) ---
             with t1:
                 st.markdown("### 📋 Редактирование меню")
                 c1, c2 = st.columns(2)
                 with c1:
-                    ew = st.selectbox("Неделя:", [1,2,3,4], format_func=lambda x: f"{x}-я неделя", key="ew")
+                    edit_week = st.selectbox(
+                        "Неделя:", [1, 2, 3, 4],
+                        format_func=lambda x: f"{x}-я неделя",
+                        key="chef_edit_week"
+                    )
                 with c2:
-                    et = st.selectbox("Тип:", ['junior','senior'], format_func=lambda x: "🍎 1-4" if x=='junior' else "🎓 5-11", key="et")
-                mdf = load_menu_from_sheet()
-                fm = mdf[(mdf['week']==ew)&(mdf['menu_type']==et)].copy()
-                if not fm.empty:
-                    edf = st.data_editor(fm, use_container_width=True, hide_index=True,
-                        column_config={
-                            "week": st.column_config.NumberColumn("Неделя", disabled=True),
-                            "day": st.column_config.SelectboxColumn("День", options=['Понедельник','Вторник','Среда','Четверг','Пятница']),
-                            "menu_type": st.column_config.SelectboxColumn("Тип", options=['junior','senior'], disabled=True),
-                            "item_name": "Блюдо",
-                            "category": st.column_config.SelectboxColumn("Категория", options=['Завтрак','Обед','Выпечка','Напитки']),
-                            "price": st.column_config.NumberColumn("Цена", min_value=0),
-                            "weight": st.column_config.NumberColumn("Вес (г)", min_value=0),
-                            "calories": st.column_config.NumberColumn("Ккал", min_value=0),
-                            "available": st.column_config.CheckboxColumn("Доступно")
-                        }, key=f"ed_{ew}_{et}")
-                    if st.button("💾 Сохранить", key=f"sv_{ew}_{et}"):
-                        others = mdf[~((mdf['week']==ew)&(mdf['menu_type']==et))]
-                        upd = pd.concat([others, edf], ignore_index=True)
-                        save_menu_to_sheet(upd)
-                        st.success("Обновлено!")
+                    edit_type = st.selectbox(
+                        "Тип меню:", ['junior', 'senior'],
+                        format_func=lambda x: "🍎 1-4 классы (вес/калории)" if x == 'junior' else "🎓 5-11 классы (цены)",
+                        key="chef_edit_type"
+                    )
+
+                menu_df = load_menu_from_sheet()
+                mask = (menu_df['week'] == edit_week) & (menu_df['menu_type'] == edit_type)
+                filtered_menu = menu_df[mask].copy()
+
+                st.markdown(f"#### Меню: {edit_week}-я неделя, {'🍎 1-4 классы' if edit_type == 'junior' else '🎓 5-11 классы'}")
+                st.caption("💡 Двойной клик по ячейке — редактирование. Галочка в столбце 🗑️ — пометка на удаление.")
+
+                if filtered_menu.empty:
+                    st.info("Меню пустое. Добавьте блюда ниже или во вкладке «➕ Добавить».")
+
+                display_df = filtered_menu.copy()
+                display_df.insert(0, '_delete', False)
+
+                edited_df = st.data_editor(
+                    display_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    num_rows="dynamic",
+                    column_config={
+                        "_delete": st.column_config.CheckboxColumn(
+                            "🗑️", help="Отметьте, чтобы удалить строку",
+                            default=False, width="small"
+                        ),
+                        "week": st.column_config.NumberColumn("Неделя", min_value=1, max_value=4, disabled=True, width="small"),
+                        "day": st.column_config.SelectboxColumn("День",
+                            options=['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'], required=True),
+                        "menu_type": st.column_config.SelectboxColumn("Тип",
+                            options=['junior', 'senior'], disabled=True, width="small"),
+                        "item_name": st.column_config.TextColumn("Блюдо", required=True),
+                        "category": st.column_config.SelectboxColumn("Категория",
+                            options=['Завтрак', 'Обед', 'Выпечка', 'Напитки', 'Салаты', 'Первое', 'Второе'], required=True),
+                        "price": st.column_config.NumberColumn("Цена (₸)", min_value=0, step=10, format="%d ₸"),
+                        "weight": st.column_config.NumberColumn("Кол", min_value=0, step=10, format="%d г"),
+                        "calories": st.column_config.NumberColumn("Ккал", min_value=0, step=10, format="%d"),
+                        "available": st.column_config.CheckboxColumn("Доступно", default=True)
+                    },
+                    key=f"menu_editor_{edit_week}_{edit_type}"
+                )
+
+                bc1, bc2, bc3 = st.columns([1, 1, 1])
+                with bc1:
+                    if st.button("💾 Сохранить изменения", key=f"save_{edit_week}_{edit_type}", use_container_width=True):
+                        to_delete = edited_df[edited_df['_delete'] == True]
+                        to_keep = edited_df[edited_df['_delete'] == False].copy()
+                        if '_delete' in to_keep.columns:
+                            to_keep = to_keep.drop(columns=['_delete'])
+                        other_rows = menu_df[~mask].copy()
+                        to_keep['week'] = edit_week
+                        to_keep['menu_type'] = edit_type
+                        updated_menu = pd.concat([other_rows, to_keep], ignore_index=True)
+                        cols_order = ['week','day','menu_type','item_name','category','price','weight','calories','available']
+                        for col in cols_order:
+                            if col not in updated_menu.columns:
+                                updated_menu[col] = 0 if col in ['price','weight','calories'] else ''
+                        updated_menu = updated_menu[cols_order]
+                        save_menu_to_sheet(updated_menu)
+                        deleted_count = len(to_delete)
+                        if deleted_count > 0:
+                            st.success(f"✅ Сохранено! Удалено строк: {deleted_count}")
+                        else:
+                            st.success("✅ Изменения сохранены!")
+                        time.sleep(1)
                         st.rerun()
-                else:
-                    st.info("Меню пустое")
 
-            with t2:
-                st.markdown("### ➕ Добавить блюдо")
-                c1, c2 = st.columns(2)
-                with c1:
-                    nw = st.selectbox("Неделя", [1,2,3,4], format_func=lambda x: f"{x}-я неделя", key="nw")
-                    nd = st.selectbox("День", ['Понедельник','Вторник','Среда','Четверг','Пятница'], key="nd")
-                    nt = st.selectbox("Тип", ['junior','senior'], format_func=lambda x: "🍎 1-4" if x=='junior' else "🎓 5-11", key="nt")
-                    nname = st.text_input("Название", key="nname")
-                with c2:
-                    ncat = st.selectbox("Категория", ['Завтрак','Обед','Выпечка','Напитки'], key="ncat")
-                    np = st.number_input("Цена (₸)", min_value=0, step=10, key="np")
-                    nwt = st.number_input("Вес (г)", min_value=0, step=10, key="nwt")
-                    nc = st.number_input("Ккал", min_value=0, step=10, key="nc")
-                if st.button("➕ Добавить", key="addbtn"):
-                    if nname:
-                        add_new_item(nw, nd, nt, nname, ncat, np, nwt, nc)
-                        st.success(f"Добавлено: {nname}")
+                with bc2:
+                    if st.button("🗑️ Удалить выделенные", key=f"del_{edit_week}_{edit_type}", use_container_width=True):
+                        to_delete = edited_df[edited_df['_delete'] == True]
+                        if to_delete.empty:
+                            st.warning("⚠️ Не отмечено ни одной строки. Поставьте галочку в столбце 🗑️")
+                        else:
+                            to_keep = edited_df[edited_df['_delete'] == False].copy()
+                            if '_delete' in to_keep.columns:
+                                to_keep = to_keep.drop(columns=['_delete'])
+                            other_rows = menu_df[~mask].copy()
+                            to_keep['week'] = edit_week
+                            to_keep['menu_type'] = edit_type
+                            updated_menu = pd.concat([other_rows, to_keep], ignore_index=True)
+                            cols_order = ['week','day','menu_type','item_name','category','price','weight','calories','available']
+                            for col in cols_order:
+                                if col not in updated_menu.columns:
+                                    updated_menu[col] = 0 if col in ['price','weight','calories'] else ''
+                            updated_menu = updated_menu[cols_order]
+                            save_menu_to_sheet(updated_menu)
+                            st.success(f"🗑️ Удалено строк: {len(to_delete)}")
+                            time.sleep(1)
+                            st.rerun()
+
+                with bc3:
+                    if st.button("↩️ Отменить изменения", key=f"reset_{edit_week}_{edit_type}", use_container_width=True):
                         st.rerun()
-                    else:
-                        st.error("Введите название")
 
-            with t3:
-                st.markdown("### 📦 Заказы")
-                po = get_pending_orders()
-                if not po.empty:
-                    st.info(f"Ожидают: {len(po)}")
-                    for idx, (_, o) in enumerate(po.iterrows()):
-                        with st.expander(f"🎫 {o.get('order_number','N/A')} - {o.get('student_name','N/A')}"):
-                            st.markdown(f"**Сумма:** {o.get('total_price',0)}₸")
-                            st.markdown(f"**Заказ:** {o.get('items','N/A')}")
-                            if st.button("✅ Выдать", key=f"c_{idx}"):
-                                complete_order(o['order_number'])
-                                st.rerun()
-                else:
-                    st.success("🎉 Нет активных заказов")
-
-            with t4:
-                st.markdown("### 📊 Отчеты")
-                rt = st.radio("Тип:", ["Недельный","Месячный"], horizontal=True)
-                df = load_weekly_report() if rt == "Недельный" else load_monthly_report()
-                if not df.empty and 'order_number' in df.columns:
-                    cc = len(df[df['status']=='completed']['order_number'].unique()) if 'status' in df.columns else 0
-                    pc = len(df[df['status']=='pending']['order_number'].unique()) if 'status' in df.columns else 0
-                    tr = df['order_total'].sum() if 'order_total' in df.columns else 0
-                    c1, c2, c3 = st.columns(3)
-                    with c1: st.metric("✅ Выдано", cc)
-                    with c2: st.metric("⏳ Ожидают", pc)
-                    with c3: st.metric("💰 Выручка", f"{tr:,.0f}₸")
-                    csv_data = df.to_csv(index=False).encode('utf-8-sig')
-                    fname = WEEKLY_REPORT_FILE if rt == "Недельный" else MONTHLY_REPORT_FILE
-                    st.download_button("📥 Скачать", csv_data, fname, "text/csv")
-                else:
-                    st.info("Нет данных")
-
-            with t5:
-                st.markdown("### 🔐 QR-код повара")
-                if st.button("🔄 Сгенерировать"):
-                    qr = generate_chef_qr()
-                    buf = BytesIO()
-                    qr.save(buf, format="PNG")
-                    st.session_state.chef_qr = buf.getvalue()
-                if st.session_state.get('chef_qr'):
-                    st.image(st.session_state.chef_qr, caption="QR повара", width=250)
-                    st.download_button("📥 Скачать QR", st.session_state.chef_qr, "chef_qr.png", "image/png")
                 st.markdown("---")
-                if st.button("🚪 Выйти"):
-                    st.session_state.chef_authenticated = False
-                    st.rerun()
+                st.markdown("##### ➕ Быстрое добавление строки")
 
-if __name__ == "__main__":
-    main()
-
-
+                with st.form(key=f"quick_add_{edit_week}_{edit_type}", clear_on_submit=True):
+                    fc1, fc2, fc3, fc4, fc5 = st.columns([2, 2, 1, 1, 1])
+                    with fc1:
+                        q_name = st.text_input("Название", key=f"qa_name_{edit_week}_{edit_type}")
+                    with fc2:
+                        q_cat = st.selectbox("Категория",
+                            ['Завтрак','Обед','Выпечка','Напитки','Салаты','Первое','Второе'],
+                            key=f"qa_cat_{edit_week}_{edit_type}")
+                    with fc3:
+                        q_day = st.selectbox("День",
+                            ['Понедельник','Вторник','Среда','Чет
