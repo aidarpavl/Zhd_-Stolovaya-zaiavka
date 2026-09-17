@@ -1,2 +1,2 @@
-# Zhd_-Stolovaya-zaiavka
-Zhd_ Stolovaya-zaiavka
+# Stolovaya-zaiavka
+Stolovaya zaiavka
