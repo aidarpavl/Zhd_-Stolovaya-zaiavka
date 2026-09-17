@@ -240,7 +240,7 @@ st.markdown("""
 
 
 def render_student():
-    st.markdown("# 🍽️ Столовая школы")
+    st.markdown("# 🍽️ Столовая школы Жас Дарын")
     st.caption("Закажи обед онлайн")
 
     if 'last_order_number' not in st.session_state:
