@@ -52,11 +52,22 @@ MONTHLY_PATH = "Stol_Zhd month1.csv"
 GH_TOKEN = None
 GH_OK = False
 CHEF_PWD = "povar2026"
+SECRETS_STATUS = "тексерілмеді"
 
 try:
-    if hasattr(st, "secrets") and len(st.secrets) > 0:
+    if not hasattr(st, "secrets"):
+        SECRETS_STATUS = "st.secrets жоқ"
+    elif len(st.secrets) == 0:
+        SECRETS_STATUS = "Secrets бос (0 кілт)"
+    else:
+        keys = list(st.secrets.keys())
+        SECRETS_STATUS = f"Keys: {keys}"
+
         if "github" in st.secrets:
             g = st.secrets["github"]
+            gh_keys = list(g.keys())
+            SECRETS_STATUS += f" | github: {gh_keys}"
+
             GH_TOKEN = g.get("token")
             GH_OWNER = g.get("owner", GH_OWNER)
             GH_REPO = g.get("repo", GH_REPO)
@@ -64,15 +75,25 @@ try:
             MENU_PATH = g.get("menu_path", MENU_PATH)
             DAILY_PATH = g.get("daily_report_path", DAILY_PATH)
             MONTHLY_PATH = g.get("monthly_report_path", MONTHLY_PATH)
+
+            if GH_TOKEN:
+                GH_TOKEN = str(GH_TOKEN).strip()
+                if GH_TOKEN.startswith(("ghp_", "github_pat_", "gho_", "ghs_")):
+                    GH_OK = True
+                    SECRETS_STATUS += " | ✅ ТОКЕН ДҰРЫС"
+                else:
+                    SECRETS_STATUS += f" | ❌ Токен форматы: {GH_TOKEN[:10]}..."
+                    GH_TOKEN = None
+            else:
+                SECRETS_STATUS += " | ❌ token ЖОҚ"
+        else:
+            SECRETS_STATUS += " | ❌ [github] секциясы ЖОҚ"
+
         if "auth" in st.secrets:
             CHEF_PWD = st.secrets["auth"].get("chef_password", CHEF_PWD)
-    if GH_TOKEN and isinstance(GH_TOKEN, str):
-        GH_TOKEN = GH_TOKEN.strip()
-        if GH_TOKEN.startswith(("ghp_", "github_pat_", "gho_", "ghs_")):
-            GH_OK = True
-        else:
-            GH_TOKEN = None
-except Exception:
+
+except Exception as e:
+    SECRETS_STATUS = f"Қате: {e}"
     GH_TOKEN = None
     GH_OK = False
 
@@ -88,7 +109,7 @@ def gh_api(path):
 REQUIRED = ["week", "day", "item_name", "category", "price", "available"]
 
 # ============================================================
-# FALLBACK МӘЗІР
+# FALLBACK
 # ============================================================
 FALLBACK_DATA = [
     ("1-я неделя", "Понедельник", "Каша овсяная с ягодами", "Завтрак", 450),
@@ -156,7 +177,7 @@ def load_menu():
 
 def save_csv_gh(df, path, msg):
     if not GH_OK:
-        st.error("❌ GitHub токені орнатылмаған!")
+        st.error("❌ GitHub токені орнатылмаған! Secrets-ті тексеріңіз.")
         return False
     h = {
         "Authorization": f"token {GH_TOKEN}",
@@ -295,28 +316,20 @@ menu_df = load_menu()
 # SIDEBAR
 # ============================================================
 with st.sidebar:
-    # ===== ДИАГНОСТИКА (уақытша) =====
+    # ===== ДИАГНОСТИКА =====
     with st.expander("🔍 Secrets диагностика"):
-        try:
-            st.write("Secrets бар ма:", hasattr(st, "secrets") and len(st.secrets) > 0)
-            if hasattr(st, "secrets") and len(st.secrets) > 0:
-                st.write("Keys:", list(st.secrets.keys()))
-                if "github" in st.secrets:
-                    gh = st.secrets["github"]
-                    st.write("github keys:", list(gh.keys()))
-                    tok = gh.get("token", "")
-                    st.write("Token бар ма:", bool(tok))
-                    st.write("Token ұзындығы:", len(tok) if tok else 0)
-                    st.write("Token басы:", tok[:12] if tok else "—")
-                    st.write("repo:", gh.get("repo", "—"))
-                else:
-                    st.error("❌ [github] секциясы жоқ!")
-            else:
-                st.error("❌ Secrets бос!")
-            st.write("GH_OK:", GH_OK)
-            st.write("GH_REPO:", GH_REPO)
-        except Exception as e:
-            st.error(f"Қате: {e}")
+        st.write("**Secrets keys:**", list(st.secrets.keys()) if hasattr(st, "secrets") else "—")
+        st.write("**SECRETS_STATUS:**")
+        st.code(SECRETS_STATUS)
+        st.write("**GH_OK:**", GH_OK)
+        st.write("**GH_OWNER:**", GH_OWNER)
+        st.write("**GH_REPO:**", GH_REPO)
+        st.write("**Token бар ма:**", bool(GH_TOKEN))
+        if GH_TOKEN:
+            st.write("**Token ұзындығы:**", len(GH_TOKEN))
+            st.write("**Token басы:**", GH_TOKEN[:12])
+        else:
+            st.error("❌ Token ЖОҚ")
 
     st.markdown("---")
     st.markdown("### ⚙️ Режим")
@@ -512,7 +525,6 @@ else:
     t1, t2, t3, t4, t5 = st.tabs(["📋 Меню", "➕ Қосу", "📦 Заказы",
                                   "📊 Күндік", "📈 Айлық"])
 
-    # --- МӘЗІРДІ ӨҢДЕУ ---
     with t1:
         st.markdown("### 📋 Мәзір (4 апта)")
         c1, c2 = st.columns(2)
@@ -578,7 +590,6 @@ else:
         if st.session_state.show_full:
             st.dataframe(menu_df, use_container_width=True, height=400)
 
-    # --- ЖАҢА ТАҒАМ ---
     with t2:
         st.markdown("### ➕ Жаңа тағам")
         with st.form("add"):
@@ -608,7 +619,6 @@ else:
                             st.success("✅ Қосылды!")
                             st.rerun()
 
-    # --- ТАПСЫРЫСТАР ---
     with t3:
         st.markdown("### 📦 Заказы")
         odf = load_orders()
@@ -624,7 +634,6 @@ else:
                                "orders.csv", "text/csv",
                                use_container_width=True, key="dl_orders")
 
-    # --- КҮНДІК ЕСЕП ---
     with t4:
         st.markdown("### 📊 Күндік есеп")
         st.caption(f"→ `{DAILY_PATH}`")
@@ -652,7 +661,6 @@ else:
                                      DAILY_PATH, "Есеп күні"):
                         st.success("✅ Сақталды!")
 
-    # --- АЙЛЫҚ ЕСЕП ---
     with t5:
         st.markdown("### 📈 Айлық есеп")
         st.caption(f"→ `{MONTHLY_PATH}`")
@@ -668,23 +676,4 @@ else:
                          type="primary", key="make_monthly_btn"):
                 r = monthly_report(int(y), int(m))
                 if r.empty:
-                    st.warning("⚠️ Деректер жоқ.")
-                else:
-                    st.session_state.month_r = r
-                    st.success(f"✅ {len(r)} жазба")
-
-        if "month_r" in st.session_state and not st.session_state.month_r.empty:
-            st.dataframe(st.session_state.month_r, use_container_width=True)
-            if st.button("💾 Айлық есепті сақтау", use_container_width=True,
-                         type="primary", key="save_monthly_btn"):
-                with st.spinner("Жіберілуде..."):
-                    if append_report(st.session_state.month_r,
-                                     MONTHLY_PATH, "Ай"):
-                        st.success("✅ Сақталды!")
-
-st.markdown("---")
-st.markdown(
-    "<p style='text-align:center;color:gray;font-size:.85rem;'>"
-    "🍽️ Жас Дарын · GitHub + Streamlit · 2026</p>",
-    unsafe_allow_html=True
-)
+                    st.warning("⚠
