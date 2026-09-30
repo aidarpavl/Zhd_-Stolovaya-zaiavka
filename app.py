@@ -1,5 +1,6 @@
 """
-«Жас Дарын» мектебінің асханасы — бір файлдық нұсқа
+«Жас Дарын» мектебінің асханасы
+Репозиторий: aidarpavl/Zhd_-Stolovaya-zaiavka
 """
 
 import streamlit as st
@@ -10,8 +11,6 @@ import os
 from datetime import datetime
 from io import StringIO
 
-# ============================================================
-# КОНФИГ
 # ============================================================
 st.set_page_config(page_title="Жас Дарын асханасы", page_icon="🍽️", layout="wide")
 
@@ -32,7 +31,9 @@ CATS = ["Завтрак", "Обед", "Салаты", "Первое", "Втор�
 # ============================================================
 # GITHUB КОНФИГ
 # ============================================================
-GH_OWNER, GH_REPO, GH_BRANCH = "aidarpavl", "Zhd_-Stolovaya-zaiavka", "main"
+GH_OWNER = "aidarpavl"
+GH_REPO = "Zhd_-Stolovaya-zaiavka"
+GH_BRANCH = "main"
 MENU_PATH = "menu.csv"
 DAILY_PATH = "Stolovaia ZHD1.csv"
 MONTHLY_PATH = "Stol_Zhd month1.csv"
@@ -60,7 +61,8 @@ try:
         else:
             GH_TOKEN = None
 except Exception:
-    GH_TOKEN, GH_OK = None, False
+    GH_TOKEN = None
+    GH_OK = False
 
 
 def gh_raw(path):
@@ -73,36 +75,32 @@ def gh_api(path):
 
 REQUIRED = ["week", "day", "item_name", "category", "price", "available"]
 
-# ============================================================
-# FALLBACK
-# ============================================================
+FALLBACK_DATA = [
+    ("1-я неделя", "Понедельник", "Каша овсяная с ягодами", "Завтрак", 450),
+    ("1-я неделя", "Понедельник", "Бутерброд с сыром", "Завтрак", 350),
+    ("1-я неделя", "Понедельник", "Борщ со сметаной", "Обед", 550),
+    ("1-я неделя", "Понедельник", "Котлета с пюре", "Обед", 650),
+    ("1-я неделя", "Понедельник", "Компот из сухофруктов", "Напитки", 150),
+    ("1-я неделя", "Вторник", "Салат овощной", "Салаты", 400),
+    ("1-я неделя", "Вторник", "Солянка мясная", "Первое", 500),
+    ("1-я неделя", "Вторник", "Макароны с сыром", "Второе", 550),
+    ("1-я неделя", "Среда", "Винегрет", "Салаты", 450),
+    ("1-я неделя", "Среда", "Суп грибной", "Первое", 480),
+    ("1-я неделя", "Среда", "Рыба с рисом", "Второе", 700),
+    ("1-я неделя", "Четверг", "Морковный салат", "Салаты", 350),
+    ("1-я неделя", "Четверг", "Рассольник", "Первое", 470),
+    ("1-я неделя", "Четверг", "Гречка с мясом", "Второе", 600),
+    ("1-я неделя", "Пятница", "Салат Греческий", "Салаты", 580),
+    ("1-я неделя", "Пятница", "Лагман", "Второе", 750),
+    ("1-я неделя", "Пятница", "Сок апельсиновый", "Напитки", 250),
+]
+
 FALLBACK = pd.DataFrame([
     {"week": w, "day": d, "item_name": n, "category": c, "price": p, "available": True}
-    for w, d, n, c, p in [
-        ("1-я неделя", "Понедельник", "Каша овсяная с ягодами", "Завтрак", 450),
-        ("1-я неделя", "Понедельник", "Бутерброд с сыром", "Завтрак", 350),
-        ("1-я неделя", "Понедельник", "Борщ со сметаной", "Обед", 550),
-        ("1-я неделя", "Понедельник", "Котлета с пюре", "Обед", 650),
-        ("1-я неделя", "Понедельник", "Компот из сухофруктов", "Напитки", 150),
-        ("1-я неделя", "Вторник", "Салат овощной", "Салаты", 400),
-        ("1-я неделя", "Вторник", "Солянка мясная", "Первое", 500),
-        ("1-я неделя", "Вторник", "Макароны с сыром", "Второе", 550),
-        ("1-я неделя", "Среда", "Винегрет", "Салаты", 450),
-        ("1-я неделя", "Среда", "Суп грибной", "Первое", 480),
-        ("1-я неделя", "Среда", "Рыба с рисом", "Второе", 700),
-        ("1-я неделя", "Четверг", "Морковный салат", "Салаты", 350),
-        ("1-я неделя", "Четверг", "Рассольник", "Первое", 470),
-        ("1-я неделя", "Четверг", "Гречка с мясом", "Второе", 600),
-        ("1-я неделя", "Пятница", "Салат Греческий", "Салаты", 580),
-        ("1-я неделя", "Пятница", "Лагман", "Второе", 750),
-        ("1-я неделя", "Пятница", "Сок апельсиновый", "Напитки", 250),
-    ]
+    for w, d, n, c, p in FALLBACK_DATA
 ])
 
 
-# ============================================================
-# МӘЗІР
-# ============================================================
 def normalize(df):
     df = df.copy()
     df.columns = [str(c).strip().lower() for c in df.columns]
@@ -140,16 +138,17 @@ def load_menu():
 
 def save_csv_gh(df, path, msg):
     if not GH_OK:
+        st.error("❌ GitHub токені орнатылмаған!")
         return False
     h = {"Authorization": f"token {GH_TOKEN}",
          "Accept": "application/vnd.github.v3+json"}
     url = gh_api(path)
     try:
         r = requests.get(url, headers=h, timeout=10)
-        sha = r.json().get("sha") if r.status_code == 200 else None
         if r.status_code == 401:
             st.error("❌ Токен жарамсыз!")
             return False
+        sha = r.json().get("sha") if r.status_code == 200 else None
         content = base64.b64encode(df.to_csv(index=False).encode()).decode()
         payload = {"message": msg, "content": content, "branch": GH_BRANCH}
         if sha:
@@ -168,9 +167,6 @@ def save_menu(df):
     return save_csv_gh(df, MENU_PATH, f"Мәзір ({datetime.now():%Y-%m-%d %H:%M})")
 
 
-# ============================================================
-# ТАПСЫРЫСТАР
-# ============================================================
 ORDER_COLS = ["timestamp", "class", "week", "day", "item_name",
               "category", "price", "quantity", "total"]
 
@@ -194,9 +190,6 @@ def save_order(row):
     df.to_csv("Orders.csv", index=False)
 
 
-# ============================================================
-# ЕСЕПТЕР
-# ============================================================
 def daily_report(date_str):
     df = load_orders()
     if df.empty:
@@ -246,12 +239,17 @@ def append_report(report_df, path, key_col):
     return save_csv_gh(final, path, f"Есеп {val}")
 
 
-# ============================================================
-# СЕССИЯ
-# ============================================================
-for k, v in {"cart": [], "role": "Ученик", "week": "1-я неделя",
-             "day": "Понедельник", "class": "", "last_order": None,
-             "chef_ok": False, "show_full": False}.items():
+SESSION_DEFAULTS = {
+    "cart": [],
+    "role": "Ученик",
+    "week": "1-я неделя",
+    "day": "Понедельник",
+    "class": "",
+    "last_order": None,
+    "chef_ok": False,
+    "show_full": False,
+}
+for k, v in SESSION_DEFAULTS.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -261,6 +259,19 @@ menu_df = load_menu()
 # SIDEBAR
 # ============================================================
 with st.sidebar:
+    with st.expander("🔍 Secrets диагностика"):
+        try:
+            st.write("GH_OK:", GH_OK)
+            st.write("GH_REPO:", GH_REPO)
+            st.write("GH_OWNER:", GH_OWNER)
+            st.write("Token бар ма:", bool(GH_TOKEN))
+            if GH_TOKEN:
+                st.write("Token ұзындығы:", len(GH_TOKEN))
+                st.write("Token басы:", GH_TOKEN[:12])
+        except Exception as e:
+            st.error(f"Қате: {e}")
+
+    st.markdown("---")
     st.markdown("### ⚙️ Режим")
     role = st.radio("Роль:", ["Ученик", "Повар"],
                     index=0 if st.session_state.role == "Ученик" else 1)
@@ -268,7 +279,7 @@ with st.sidebar:
 
     st.markdown("---")
     if GH_OK:
-        st.success("🔗 GitHub ✅")
+        st.success(f"🔗 GitHub ✅\n\n{GH_OWNER}/{GH_REPO}")
     else:
         st.warning("📴 GitHub: тек оқу")
 
@@ -277,7 +288,8 @@ with st.sidebar:
         st.markdown("### 🔐 Кіру")
         if not st.session_state.chef_ok:
             pwd = st.text_input("Пароль:", type="password", key="pwd")
-            if st.button("🔓 Кіру", use_container_width=True, type="primary"):
+            if st.button("🔓 Кіру", use_container_width=True,
+                         type="primary", key="login_btn"):
                 if pwd == CHEF_PWD:
                     st.session_state.chef_ok = True
                     st.rerun()
@@ -285,7 +297,7 @@ with st.sidebar:
                     st.error("❌ Пароль дұрыс емес!")
         else:
             st.success("✅ Кірдіңіз")
-            if st.button("🚪 Шығу", use_container_width=True):
+            if st.button("🚪 Шығу", use_container_width=True, key="logout_btn"):
                 st.session_state.chef_ok = False
                 st.rerun()
 
@@ -308,30 +320,39 @@ with st.sidebar:
                         st.rerun()
                 total += it["price"] * it["quantity"]
             st.markdown(f"### 💰 {total}₸")
-            if st.button("🗑️ Тазалау", use_container_width=True):
+            if st.button("🗑️ Тазалау", use_container_width=True, key="clear_cart"):
                 st.session_state.cart = []
                 st.rerun()
-            if st.button("✅ Тапсырыс беру", type="primary", use_container_width=True):
+            if st.button("✅ Тапсырыс беру", type="primary",
+                         use_container_width=True, key="submit_order"):
                 if not st.session_state["class"]:
                     st.error("⚠️ Класс енгізіңіз!")
                 else:
                     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     for it in st.session_state.cart:
-                        save_order({"timestamp": ts, "class": st.session_state["class"],
-                                    "week": st.session_state.week, "day": st.session_state.day,
-                                    "item_name": it["item_name"], "category": it["category"],
-                                    "price": it["price"], "quantity": it["quantity"],
-                                    "total": it["price"] * it["quantity"]})
+                        save_order({
+                            "timestamp": ts,
+                            "class": st.session_state["class"],
+                            "week": st.session_state.week,
+                            "day": st.session_state.day,
+                            "item_name": it["item_name"],
+                            "category": it["category"],
+                            "price": it["price"],
+                            "quantity": it["quantity"],
+                            "total": it["price"] * it["quantity"]
+                        })
                     st.session_state.last_order = {
-                        "timestamp": ts, "items": st.session_state.cart.copy(),
-                        "total": total}
+                        "timestamp": ts,
+                        "items": st.session_state.cart.copy(),
+                        "total": total
+                    }
                     st.session_state.cart = []
                     st.success("✅ Тапсырыс қабылданды!")
                     st.balloons()
                     st.rerun()
 
 # ============================================================
-# ОҚУШЫ
+# ОҚУШЫ РЕЖИМІ
 # ============================================================
 if st.session_state.role == "Ученик":
     st.markdown('<div class="main-header">🍽️ Столовая школы Жас Дарын</div>',
@@ -341,12 +362,13 @@ if st.session_state.role == "Ученик":
     st.markdown("### 🎓 Класс")
     c1, c2 = st.columns([1, 3])
     with c1:
-        cls = st.text_input("Класс:", value=st.session_state["class"] or "8")
+        cls = st.text_input("Класс:", value=st.session_state["class"] or "8",
+                            key="class_input")
     with c2:
         st.markdown("<br>", unsafe_allow_html=True)
         if cls:
             n = int("".join(filter(str.isdigit, cls)) or 0)
-            grp = ("1-4" if n <= 4 else "5-8" if n <= 8 else "9-11")
+            grp = "1-4" if n <= 4 else ("5-8" if n <= 8 else "9-11")
             st.success(f"🎓 {grp}: {cls}")
     st.session_state["class"] = cls
     st.markdown("---")
@@ -355,23 +377,28 @@ if st.session_state.role == "Ученик":
     wc = st.columns(4)
     for i, w in enumerate(WEEKS):
         with wc[i]:
+            active = st.session_state.week == w
             if st.button(w, key=f"w{i}", use_container_width=True,
-                         type="primary" if st.session_state.week == w else "secondary"):
+                         type="primary" if active else "secondary"):
                 st.session_state.week = w
                 st.rerun()
 
     st.markdown("### 📆 Күн:")
     idx = DAYS.index(st.session_state.day) if st.session_state.day in DAYS else 0
-    sd = st.selectbox("Күн:", DAYS, index=idx, label_visibility="collapsed")
+    sd = st.selectbox("Күн:", DAYS, index=idx,
+                      label_visibility="collapsed", key="day_select")
     st.session_state.day = sd
 
     cats = ["Все"] + sorted(menu_df["category"].unique().tolist())
     st.markdown("### 🏷️ Санат:")
-    sc = st.selectbox("Санат:", cats, label_visibility="collapsed")
+    sc = st.selectbox("Санат:", cats, label_visibility="collapsed",
+                      key="cat_select")
 
     st.markdown("---")
-    st.markdown(f"### 🍽️ {sd} <span class='week-badge'>{st.session_state.week}</span>",
-                unsafe_allow_html=True)
+    st.markdown(
+        f"### 🍽️ {sd} <span class='week-badge'>{st.session_state.week}</span>",
+        unsafe_allow_html=True
+    )
 
     dm = menu_df[(menu_df["week"] == st.session_state.week) &
                  (menu_df["day"] == sd)].copy()
@@ -389,7 +416,8 @@ if st.session_state.role == "Ученик":
                     f'<h4>{row["item_name"]}</h4>'
                     f'<span class="category-tag">{row["category"]}</span>'
                     f'<p class="price-tag">💰 {row["price"]}₸</p></div>',
-                    unsafe_allow_html=True)
+                    unsafe_allow_html=True
+                )
                 q = st.number_input("Саны", 1, 10, 1, key=f"q{rid}")
                 if st.button("🛒 Себетке", key=f"a{rid}",
                              use_container_width=True, type="primary"):
@@ -404,7 +432,8 @@ if st.session_state.role == "Ученик":
                             "item_name": row["item_name"],
                             "category": row["category"],
                             "price": int(row["price"]),
-                            "quantity": q})
+                            "quantity": q
+                        })
                     st.success(f"✅ {row['item_name']}")
                     st.rerun()
 
@@ -417,7 +446,7 @@ if st.session_state.role == "Ученик":
             st.write(f"**Жалпы: {st.session_state.last_order['total']}₸**")
 
 # ============================================================
-# АСХАНАШЫ
+# АСХАНАШЫ РЕЖИМІ
 # ============================================================
 else:
     st.markdown('<div class="main-header">👨‍🍳 Панель повара</div>',
@@ -430,14 +459,15 @@ else:
     t1, t2, t3, t4, t5 = st.tabs(["📋 Меню", "➕ Қосу", "📦 Заказы",
                                   "📊 Күндік", "📈 Айлық"])
 
-    # --- МӘЗІР ---
     with t1:
         st.markdown("### 📋 Мәзір (4 апта)")
         c1, c2 = st.columns(2)
         with c1:
-            ew = st.selectbox("Апта:", WEEKS, index=WEEKS.index(st.session_state.week))
+            ew = st.selectbox("Апта:", WEEKS,
+                              index=WEEKS.index(st.session_state.week),
+                              key="edit_week")
         with c2:
-            ed = st.selectbox("Күн:", ["Все дни"] + DAYS)
+            ed = st.selectbox("Күн:", ["Все дни"] + DAYS, key="edit_day")
 
         if ed == "Все дни":
             fd = menu_df[menu_df["week"] == ew].copy()
@@ -447,7 +477,9 @@ else:
         st.caption(f"💡 {ew} / {ed} — {len(fd)} тағам")
 
         edited = st.data_editor(
-            fd, use_container_width=True, num_rows="dynamic",
+            fd,
+            use_container_width=True,
+            num_rows="dynamic",
             column_config={
                 "week": st.column_config.SelectboxColumn("Апта", options=WEEKS, required=True),
                 "day": st.column_config.SelectboxColumn("Күн", options=DAYS, required=True),
@@ -455,15 +487,19 @@ else:
                 "category": st.column_config.SelectboxColumn("Санат", options=CATS, required=True),
                 "price": st.column_config.NumberColumn("Баға ₸", min_value=0, format="%d₸"),
                 "available": st.column_config.CheckboxColumn("Бар"),
-            }, key="menu_ed")
+            },
+            key="menu_ed"
+        )
 
         c1, c2, c3 = st.columns(3)
         with c1:
-            if st.button("💾 GitHub-қа сақтау", use_container_width=True, type="primary"):
+            if st.button("💾 Мәзірді сақтау", use_container_width=True,
+                         type="primary", key="save_menu_btn"):
                 if ed == "Все дни":
                     keep = menu_df[menu_df["week"] != ew].copy()
                 else:
-                    keep = menu_df[~((menu_df["week"] == ew) & (menu_df["day"] == ed))].copy()
+                    keep = menu_df[~((menu_df["week"] == ew) &
+                                     (menu_df["day"] == ed))].copy()
                 final = pd.concat([keep, edited], ignore_index=True)
                 with st.spinner("Жіберілуде..."):
                     if save_menu(final):
@@ -471,17 +507,18 @@ else:
                         st.success("✅ Сақталды!")
                         st.rerun()
         with c2:
-            if st.button("🔄 Жаңарту", use_container_width=True):
+            if st.button("🔄 Жаңарту", use_container_width=True,
+                         key="refresh_menu_btn"):
                 st.cache_data.clear()
                 st.rerun()
         with c3:
-            if st.button("📋 Барлық", use_container_width=True):
+            if st.button("📋 Барлық", use_container_width=True,
+                         key="show_all_btn"):
                 st.session_state.show_full = not st.session_state.show_full
 
         if st.session_state.show_full:
             st.dataframe(menu_df, use_container_width=True, height=400)
 
-    # --- ҚОСУ ---
     with t2:
         st.markdown("### ➕ Жаңа тағам")
         with st.form("add"):
@@ -492,14 +529,18 @@ else:
                 nn = st.text_input("Атауы:", key="an")
                 nc = st.selectbox("Санат:", CATS, key="ac")
             with c2:
-                nprice = st.number_input("Баға ₸:", min_value=0, value=500, step=50, key="ap")
+                nprice = st.number_input("Баға ₸:", min_value=0, value=500,
+                                         step=50, key="ap")
                 na = st.checkbox("Бар", value=True, key="aa")
-            if st.form_submit_button("➕ Қосу", use_container_width=True, type="primary"):
+            if st.form_submit_button("➕ Қосу", use_container_width=True,
+                                     type="primary"):
                 if not nn:
                     st.error("⚠️ Атауын енгізіңіз!")
                 else:
-                    new = pd.DataFrame([{"week": nw, "day": nd, "item_name": nn,
-                                          "category": nc, "price": nprice, "available": na}])
+                    new = pd.DataFrame([{
+                        "week": nw, "day": nd, "item_name": nn,
+                        "category": nc, "price": nprice, "available": na
+                    }])
                     upd = pd.concat([menu_df, new], ignore_index=True)
                     with st.spinner("Жіберілуде..."):
                         if save_menu(upd):
@@ -507,7 +548,6 @@ else:
                             st.success("✅ Қосылды!")
                             st.rerun()
 
-    # --- ЗАКАЗЫ ---
     with t3:
         st.markdown("### 📦 Заказы")
         odf = load_orders()
@@ -520,18 +560,19 @@ else:
             c3.metric("Сыныптар", odf["class"].nunique())
             st.dataframe(odf, use_container_width=True, height=400)
             st.download_button("📥 CSV", odf.to_csv(index=False).encode(),
-                               "orders.csv", "text/csv", use_container_width=True)
+                               "orders.csv", "text/csv",
+                               use_container_width=True, key="dl_orders")
 
-    # --- КҮНДІК ---
     with t4:
         st.markdown("### 📊 Күндік есеп")
-        st.caption("→ `Stolovaia ZHD1.csv`")
+        st.caption(f"→ {DAILY_PATH}")
         c1, c2 = st.columns([2, 1])
         with c1:
-            d = st.date_input("Күн:")
+            d = st.date_input("Күн:", key="daily_date")
         with c2:
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("📊 Жасау", use_container_width=True, type="primary"):
+            if st.button("📊 Жасау", use_container_width=True,
+                         type="primary", key="make_daily_btn"):
                 ds = d.strftime("%Y-%m-%d")
                 r = daily_report(ds)
                 if r.empty:
@@ -542,24 +583,28 @@ else:
 
         if "daily_r" in st.session_state and not st.session_state.daily_r.empty:
             st.dataframe(st.session_state.daily_r, use_container_width=True)
-           if st.button("💾 Күндік есепті сақтау", key="save_daily",
-             use_container_width=True, type="primary"):
-    with st.spinner("Жіберілуде..."):
-        if append_report(st.session_state.daily_r, DAILY_PATH, "Есеп күні"):
-            st.success("✅ Сақталды!")
-    # --- АЙЛЫҚ ---
+            if st.button("💾 Күндік есепті сақтау",
+                         use_container_width=True,
+                         type="primary",
+                         key="save_daily_btn"):
+                with st.spinner("Жіберілуде..."):
+                    if append_report(st.session_state.daily_r,
+                                     DAILY_PATH, "Есеп күні"):
+                        st.success("✅ Сақталды!")
+
     with t5:
         st.markdown("### 📈 Айлық есеп")
-        st.caption("→ `Stol_Zhd month1.csv`")
+        st.caption(f"→ {MONTHLY_PATH}")
         today = datetime.now()
         c1, c2, c3 = st.columns(3)
         with c1:
-            y = st.number_input("Жыл:", 2024, 2030, today.year)
+            y = st.number_input("Жыл:", 2024, 2030, today.year, key="year_in")
         with c2:
-            m = st.number_input("Ай:", 1, 12, today.month)
+            m = st.number_input("Ай:", 1, 12, today.month, key="month_in")
         with c3:
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("📈 Жасау", use_container_width=True, type="primary"):
+            if st.button("📈 Жасау", use_container_width=True,
+                         type="primary", key="make_monthly_btn"):
                 r = monthly_report(int(y), int(m))
                 if r.empty:
                     st.warning("⚠️ Деректер жоқ.")
@@ -569,13 +614,18 @@ else:
 
         if "month_r" in st.session_state and not st.session_state.month_r.empty:
             st.dataframe(st.session_state.month_r, use_container_width=True)
-            if st.button("💾 Айлық есепті сақтау", key="save_monthly",
-             use_container_width=True, type="primary"):
-    with st.spinner("Жіберілуде..."):
-        if append_report(st.session_state.month_r, MONTHLY_PATH, "Ай"):
-            st.success("✅ Сақталды!")
-# ============================================================
+            if st.button("💾 Айлық есепті сақтау",
+                         use_container_width=True,
+                         type="primary",
+                         key="save_monthly_btn"):
+                with st.spinner("Жіберілуде..."):
+                    if append_report(st.session_state.month_r,
+                                     MONTHLY_PATH, "Ай"):
+                        st.success("✅ Сақталды!")
+
 st.markdown("---")
-st.markdown("<p style='text-align:center;color:gray;font-size:.85rem;'>"
-            "🍽️ Жас Дарын · GitHub + Streamlit · 2026</p>",
-            unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align:center;color:gray;font-size:.85rem;'>"
+    "🍽️ Жас Дарын · GitHub + Streamlit · 2026</p>",
+    unsafe_allow_html=True
+)
