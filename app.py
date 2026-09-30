@@ -120,7 +120,7 @@ def normalize(df):
     return df.reset_index(drop=True)
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=30, show_spinner=False)
 def load_menu():
     try:
         r = requests.get(gh_raw(MENU_PATH), timeout=10)
